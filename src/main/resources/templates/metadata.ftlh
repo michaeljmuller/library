@@ -1,0 +1,22 @@
+<#import "page-template.ftl" as c/>
+<@c.page title="Metadata">
+
+    <div class="message"><span class="status-${status!}">${msg!}</span></div>
+
+    <div class="section">Download Metadata</div>
+
+    <form method="GET" action="/ss">
+        <input class="submitButton" type="submit" value="Download Metadata Spreadsheet" />
+    </form>
+
+    <div class="section">Upload Metadata</div>
+
+    <form method="POST" enctype="multipart/form-data" action="/ss?${_csrf.parameterName}=${_csrf.token}">
+        <div><input type="file" name="file" /></div>
+        <div><input class="submitButton" type="submit" value="Upload Metadata" /></div>
+    </form>
+
+    <#if stackDump?? && stackDump?has_content>
+        <pre class="stackDump">${stackDump}</pre>
+    </#if>
+</@c.page>

@@ -1,0 +1,107 @@
+body {
+    font-family: sans-serif;
+    padding: 0px;
+    margin: 0px;
+}
+
+.menu {
+    background-color: black;
+    padding: 5px;
+    font-weight: bold;
+}
+
+.menu a {
+    color: white;
+    text-decoration: none;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.menu a.profile {
+    float: right;
+}
+
+.title {
+    font-weight: bold;
+    font-size: 200%;
+    background-color: cyan;
+    margin-bottom: 25px;
+    padding: 10px;
+}
+
+.page-content {
+    margin-left: 20px;
+}
+
+.author-table td {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.asset-table td img {
+    max-width: 100px;
+}
+
+td.book-info {
+    vertical-align: top;
+    padding: 10px;
+    width: 250px;
+}
+
+.book-title {
+    font-weight: bold;
+}
+
+.asset-table tr.series td div {
+    font-weight: bold;
+    padding: 5px;
+    background-color: lightgrey;
+    margin-bottom: 15px;
+    margin-top: 15px;
+}
+
+.message {
+    font-weight: bold;
+}
+
+.status-failure {
+    color: crimson;
+}
+
+.section {
+    font-weight: bold;
+    background-color: lightgrey;
+    padding: 5px;
+    margin-bottom: 15px;
+    margin-top: 30px;
+}
+
+/* style from https://getcssscan.com/css-buttons-examples */
+.submitButton {
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   padding: 6px 14px;
+   font-family: -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+   border-radius: 6px;
+   border: none;
+   color: #fff;
+   background: linear-gradient(180deg, #4B91F7 0%, #367AF6 100%);
+   background-origin: border-box;
+   box-shadow: 0px 0.5px 1.5px rgba(54, 122, 246, 0.25), inset 0px 0.8px 0px -0.25px rgba(255, 255, 255, 0.2);
+   user-select: none;
+   -webkit-user-select: none;
+   touch-action: manipulation;
+}
+
+.submitButton:focus {
+    box-shadow: inset 0px 0.8px 0px -0.25px rgba(255, 255, 255, 0.2), 0px 0.5px 1.5px rgba(54, 122, 246, 0.25), 0px 0px 0px 3.5px rgba(58, 108, 217, 0.5);
+    outline: 0;
+}
+
+.stackDump {
+    border: 1px solid black;
+    padding: 10px;
+    font-family: monospace;
+    background-color: #f0f0f0;
+}
