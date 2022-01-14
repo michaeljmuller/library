@@ -1,11 +1,20 @@
 package org.themullers.library.auth;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 
 @EnableWebSecurity
 public class Security extends WebSecurityConfigurerAdapter {
+
+    LibraryUserDetailsService userDetailsService;
+
+    @Autowired
+    public Security(LibraryUserDetailsService userDetailsService) {
+        this.userDetailsService = userDetailsService;
+    }
 
     @Override
     public void configure(HttpSecurity http) throws Exception {
@@ -32,5 +41,16 @@ public class Security extends WebSecurityConfigurerAdapter {
             // allow everyone to access the login page
             conf.permitAll();
         });
+
+        // remember users when they come back to the site
+        http.rememberMe(conf -> {
+            conf.alwaysRemember(true);
+            conf.key("sdlkfjdsafljk");
+        });
+    }
+
+    @Override
+    public void configure(AuthenticationManagerBuilder builder) throws Exception {
+        builder.userDetailsService(userDetailsService);
     }
 }

@@ -58,12 +58,12 @@ public class LibraryDAO {
     // READ-ONLY METHODS
 
     /**
-     * Returns information about the user with a given username.
-     * @param username  The username of the user to find. 
+     * Returns information about the user with a given email address.
+     * @param email  The email address associated with the user to find.
      * @return  Information about the specified user.
      */
-    public User fetchUser(String username) {
-        String sql = String.format("select %s from users where email = '%s' limit 1", commaSeparated(USER_COLS.class), username);
+    public User fetchUser(String email) {
+        String sql = String.format("select %s from users where email = '%s' limit 1", commaSeparated(USER_COLS.class), email);
         var users = jt.query(sql, LibraryDAO::mapUser);
         return users == null || users.size() == 0 ? null : users.get(0);
     }

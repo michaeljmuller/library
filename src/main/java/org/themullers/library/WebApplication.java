@@ -182,9 +182,11 @@ public class WebApplication {
     class LibraryModelAndView extends ModelAndView {
         public LibraryModelAndView(String view) {
             super(view);
-            if (SecurityContextHolder.getContext().getAuthentication().getDetails() instanceof User user) {
-                addObject("userFirstName", user.getFirstName());
-                addObject("userLastName", user.getLastName());
+
+            var principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+            if (principal instanceof User user) {
+                addObject("user", user);
             }
         }
     }

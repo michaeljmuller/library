@@ -20,7 +20,7 @@
             <nav>
                 <ul>
                     <li><a href="/">Home</a></li>
-                    <li><a href="/athors">Authors</a></li>
+                    <li><a href="/authors">Authors</a></li>
                     <li><a href="/tags">Tags</a></li>
                     <li><a href="#">Administration</a>
                         <ul>
@@ -28,7 +28,7 @@
                             <li><a href="#">Users</a></li>
                         </ul>
                     </li>
-                    <li><a href="#">${userFirstName}</a>
+                    <li><a href="#">${user.firstName?default("user")}</a>
                         <ul>
                             <li><a href="#">Profile</a></li>
                             <li><a href="javascript:;" onclick="document.getElementById('logoutform').submit()">Logout</a></li>
@@ -36,10 +36,10 @@
                     </li>
                 </ul>
             </nav>
-            <h1>Pure CSS Drop Down Menu</h1>
-            <p>
+            <div>
+                <a href="google.com">test</a>
                 <#nested/>
-            </p>
+            </div>
         </div>
     </body>
 </html>
