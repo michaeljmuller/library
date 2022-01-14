@@ -32,8 +32,5 @@ public class Security extends WebSecurityConfigurerAdapter {
             // allow everyone to access the login page
             conf.permitAll();
         });
-
-        // configure logout
-        http.logout().logoutSuccessUrl("/login?logout");
     }
 }

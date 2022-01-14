@@ -1,4 +1,4 @@
-<#import "page-template.ftl" as c/>
+<#import "new-page-template.ftl" as c/>
 
 <@c.page title="E-book and Audiobook Library">
     Check it out.

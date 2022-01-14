@@ -3,6 +3,7 @@ package org.themullers.library;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
@@ -12,7 +13,6 @@ import org.themullers.library.db.LibraryDAO;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.HashMap;
 
 /**
  * This class handles HTTP requests from the user's web browser.
@@ -43,7 +43,7 @@ public class WebApplication {
      */
     @GetMapping("/")
     public ModelAndView home() {
-        return new ModelAndView("home");
+        return new LibraryModelAndView("home");
     }
 
     /**
@@ -52,9 +52,9 @@ public class WebApplication {
      */
     @GetMapping("/authors")
     public ModelAndView authors() {
-        var model = new HashMap<String, Object>();
-        model.put("authors", dao.fetchAllAuthors());
-        return new ModelAndView("authors", model);
+        var mv = new LibraryModelAndView("authors");
+        mv.addObject("authors", dao.fetchAllAuthors());
+        return mv;
     }
 
     /**
@@ -71,11 +71,11 @@ public class WebApplication {
         var standalone = groupedAssets.remove(LibUtils.STANDALONE);
 
         // build the model
-        var model = new HashMap<String, Object>();
-        model.put("authorName", author);
-        model.put("groupedAssets", groupedAssets);
-        model.put("standalone", standalone);
-        return new ModelAndView("author", model);
+        var mv = new LibraryModelAndView("author");
+        mv.addObject("authorName", author);
+        mv.addObject("groupedAssets", groupedAssets);
+        mv.addObject("standalone", standalone);
+        return mv;
     }
 
     /**
@@ -100,11 +100,11 @@ public class WebApplication {
      */
     @GetMapping("metadata")
     public ModelAndView metadata(@RequestParam(name="msg", required=false) String msg, @RequestParam(name="status", required=false) String status,  @ModelAttribute(name="stackDump") String stackDump) {
-        var model = new HashMap<String, Object>();
-        model.put("msg", msg);
-        model.put("status", status);
-        model.put("stackDump", stackDump);
-        return new ModelAndView("metadata", model);
+        var mv = new LibraryModelAndView("metadata");
+        mv.addObject("msg", msg);
+        mv.addObject("status", status);
+        mv.addObject("stackDump", stackDump);
+        return mv;
     }
 
     /**
@@ -162,20 +162,30 @@ public class WebApplication {
 
     @GetMapping("/tags")
     public ModelAndView tags() {
-        var model = new HashMap<String, Object>();
-        model.put("tags", dao.getTags());
-        return new ModelAndView("tags", model);
+        var mv = new LibraryModelAndView("tags");
+        mv.addObject("tags", dao.getTags());
+        return mv;
     }
 
     @GetMapping("/login")
     public ModelAndView login(@RequestParam(value="error", required=false) String error, @RequestParam(value="logout", required=false) String logout) {
-        var model = new HashMap<String, Object>();
+        var mv = new LibraryModelAndView("/niceLogin");
         if (logout != null) {
-            model.put("msg", "You have been logged out.");
+            mv.addObject("msg", "You have been logged out.");
         }
         if (error != null) {
-            model.put("msg", "Invalid login; please try again.");
+            mv.addObject("msg", "Invalid login; please try again.");
         }
-        return new ModelAndView("/niceLogin", model);
+        return mv;
+    }
+
+    class LibraryModelAndView extends ModelAndView {
+        public LibraryModelAndView(String view) {
+            super(view);
+            if (SecurityContextHolder.getContext().getAuthentication().getDetails() instanceof User user) {
+                addObject("userFirstName", user.getFirstName());
+                addObject("userLastName", user.getLastName());
+            }
+        }
     }
 }

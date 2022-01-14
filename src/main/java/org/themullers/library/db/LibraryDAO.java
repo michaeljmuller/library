@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.themullers.library.Asset;
+import org.themullers.library.User;
 
 import java.sql.Blob;
 import java.sql.ResultSet;
@@ -27,8 +28,16 @@ public class LibraryDAO {
         this.jt = jt;
     }
 
+    enum USER_COLS {
+        id,
+        email,
+        password,
+        first_name,
+        last_name,
+    }
+
     /**
-     * an enumeration of all the columns in the assests table
+     * an enumeration of all the columns in the assets table
      */
     enum ASSET_COLS {
         id,
@@ -43,51 +52,28 @@ public class LibraryDAO {
         alt_title1,
         alt_title2,
         ebook_s3_object_key,
-        audiobook_s3_object_key;
+        audiobook_s3_object_key,
+    }
 
-        /**
-         * Returns the column names as a comma-sepated string.
-         * @return the column names
-         */
-        public static String commaSeparated() {
-            return Arrays.stream(values()).map(ASSET_COLS::toString).collect(Collectors.joining(", "));
-        }
+    // READ-ONLY METHODS
 
-        /**
-         * Returns the column names as a comma-separated string, using a provided prefix.
-         * Using the prefix "a", for example, returns a string like a.column_one, a.column_two, etc.
-         * @param tableId  The prefix to prepend before each column name.
-         * @return the column names
-         */
-        public static String commaSeparated(String tableId) {
-            return Arrays.stream(values()).map(c -> c.toStringWithTableId(tableId)).collect(Collectors.joining(", "));
-        }
-
-        /**
-         * Converts the column enum to a string, pre-pending an identifier for a table reverenced in a query.
-         * @param tableId  The prefix to prepend before the column name
-         * @return  the column name
-         */
-        public String toStringWithTableId(String tableId) {
-            return tableId + "." + toString();
-        }
-
-        /**
-         * Returns a comma-separated string of question marks for use in SQL queries.
-         * The number of question marks will match the number of columns.
-         * @return a comma-separated string of question marks
-         */
-        public static String questionMarks() {
-            return String.join(", ", Collections.nCopies(ASSET_COLS.values().length, "?"));
-        }
-    };
+    /**
+     * Returns information about the user with a given username.
+     * @param username  The username of the user to find. 
+     * @return  Information about the specified user.
+     */
+    public User fetchUser(String username) {
+        String sql = String.format("select %s from users where email = '%s' limit 1", commaSeparated(USER_COLS.class), username);
+        var users = jt.query(sql, LibraryDAO::mapUser);
+        return users == null || users.size() == 0 ? null : users.get(0);
+    }
 
     /**
      * Returns all the assets in the database.
      * @return  list of assets
      */
     public List<Asset> fetchAllAssets() {
-        String sql = String.format("select %s, group_concat(t.tag separator ',') as tags from assets a inner join tags t on a.id = t.asset_id group by a.id", ASSET_COLS.commaSeparated("a"));
+        String sql = String.format("select %s, group_concat(t.tag separator ',') as tags from assets a inner join tags t on a.id = t.asset_id group by a.id", commaSeparated(ASSET_COLS.class, "a"));
         return jt.query(sql, LibraryDAO::mapAsset);
     }
 
@@ -97,7 +83,7 @@ public class LibraryDAO {
      * @return  list of assets
      */
     public List<Asset> fetchAssetsForAuthor(String author) {
-        String sql = String.format("select %s , group_concat(t.tag separator ',') as tags from assets a inner join tags t on a.id = t.asset_id where a.author = ? group by a.id", ASSET_COLS.commaSeparated("a"));
+        String sql = String.format("select %s , group_concat(t.tag separator ',') as tags from assets a inner join tags t on a.id = t.asset_id where a.author = ? group by a.id", commaSeparated(ASSET_COLS.class, "a"));
         System.out.println(sql);
         return jt.query(sql, LibraryDAO::mapAsset, author);
     }
@@ -110,8 +96,21 @@ public class LibraryDAO {
      * @return  a list of assets
      */
     public List<Asset> fetchNewestAssets(int limit, int skip) {
-        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags from assets a inner join tags t on a.id = t.asset_id group by a.id order by acq_date desc limit %s offset %s", ASSET_COLS.commaSeparated("a"), limit, skip);
+        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags from assets a inner join tags t on a.id = t.asset_id group by a.id order by acq_date desc limit %s offset %s", commaSeparated(ASSET_COLS.class, "a"), limit, skip);
         return jt.query(sql, LibraryDAO::mapAsset);
+    }
+
+    protected static User mapUser(ResultSet rs, int rowNum) throws SQLException {
+        var user = new User();
+
+        // read columns from the result set, write to properties of the object
+        user.setId(rs.getInt(USER_COLS.id.toString()));
+        user.setEmail(rs.getString(USER_COLS.email.toString()));
+        user.setPassword(rs.getString(USER_COLS.password.toString()));
+        user.setFirstName(rs.getString(USER_COLS.first_name.toString()));
+        user.setLastName(rs.getString(USER_COLS.last_name.toString()));
+
+        return user;
     }
 
     /**
@@ -127,19 +126,19 @@ public class LibraryDAO {
         var asset = new Asset();
 
         // read columns from the result set, write to properties of the object
-        asset.setId(rs.getInt(ASSET_COLS.id.toStringWithTableId("a")));
-        asset.setTitle(rs.getString(ASSET_COLS.title.toStringWithTableId("a")));
-        asset.setAuthor(rs.getString(ASSET_COLS.author.toStringWithTableId("a")));
-        asset.setAuthor2(rs.getString(ASSET_COLS.author2.toStringWithTableId("a")));
-        asset.setAuthor3(rs.getString(ASSET_COLS.author3.toStringWithTableId("a")));
-        asset.setPublicationYear(rs.getInt(ASSET_COLS.pub_year.toStringWithTableId("a")));
-        asset.setSeries(rs.getString(ASSET_COLS.series.toStringWithTableId("a")));
-        asset.setSeriesSequence(rs.getInt(ASSET_COLS.series_sequence.toStringWithTableId("a")));
-        asset.setAcquisitionDate(rs.getDate(ASSET_COLS.acq_date.toStringWithTableId("a")));
-        asset.setAltTitle1(rs.getString(ASSET_COLS.alt_title1.toStringWithTableId("a")));
-        asset.setAltTitle2(rs.getString(ASSET_COLS.alt_title2.toStringWithTableId("a")));
-        asset.setEbookS3ObjectKey(rs.getString(ASSET_COLS.ebook_s3_object_key.toStringWithTableId("a")));
-        asset.setAudiobookS3ObjectKey(rs.getString(ASSET_COLS.audiobook_s3_object_key.toStringWithTableId("a")));
+        asset.setId(rs.getInt(withTableId(ASSET_COLS.id, "a")));
+        asset.setTitle(rs.getString(withTableId(ASSET_COLS.title, "a")));
+        asset.setAuthor(rs.getString(withTableId(ASSET_COLS.author, "a")));
+        asset.setAuthor2(rs.getString(withTableId(ASSET_COLS.author2, "a")));
+        asset.setAuthor3(rs.getString(withTableId(ASSET_COLS.author3, "a")));
+        asset.setPublicationYear(rs.getInt(withTableId(ASSET_COLS.pub_year, "a")));
+        asset.setSeries(rs.getString(withTableId(ASSET_COLS.series, "a")));
+        asset.setSeriesSequence(rs.getInt(withTableId(ASSET_COLS.series_sequence, "a")));
+        asset.setAcquisitionDate(rs.getDate(withTableId(ASSET_COLS.acq_date, "a")));
+        asset.setAltTitle1(rs.getString(withTableId(ASSET_COLS.alt_title1, "a")));
+        asset.setAltTitle2(rs.getString(withTableId(ASSET_COLS.alt_title2, "a")));
+        asset.setEbookS3ObjectKey(rs.getString(withTableId(ASSET_COLS.ebook_s3_object_key, "a")));
+        asset.setAudiobookS3ObjectKey(rs.getString(withTableId(ASSET_COLS.audiobook_s3_object_key, "a")));
 
         // handle tags differently because we joined them into the result set as CSV
         for (var tag : rs.getString("tags").split(",")) {
@@ -157,8 +156,8 @@ public class LibraryDAO {
     public byte[] fetchImageForEbook(String ebookS3ObjectKey) {
         try {
             String sql = "select bits from cover_images where ebook_s3_object_key = ?";
-            Blob bits = jt.queryForObject(sql, Blob.class, ebookS3ObjectKey);
-            return bits.getBytes(1, (int) bits.length());
+            Blob blob = jt.queryForObject(sql, Blob.class, ebookS3ObjectKey);
+            return blob == null ? null : blob.getBytes(1, (int) blob.length());
         }
         catch (EmptyResultDataAccessException x) {
             return null;
@@ -183,8 +182,9 @@ public class LibraryDAO {
      * @return  true if the cover image is found, false otherwise
      */
     public boolean coverImageExists(String s3key) {
+        // TODO: remove this if it's not needed
         var count = jt.queryForObject("select count(*) from cover_images where ebook_s3_object_key = ?", Integer.class, s3key);
-        return count > 0;
+        return count != null && count > 0;
     }
 
     /**
@@ -204,13 +204,15 @@ public class LibraryDAO {
         return map;
     }
 
+    // WRITE ACCESS METHODS
+
     /**
      * Inserts an asset into the database.
      * @param asset  the asset to insert
      */
     @Transactional
     public void insertAsset(Asset asset) {
-        String sql = String.format("insert into assets (%s) values (%s)", ASSET_COLS.commaSeparated(), ASSET_COLS.questionMarks());
+        String sql = String.format("insert into assets (%s) values (%s)", commaSeparated(ASSET_COLS.class), questionMarks(ASSET_COLS.class));
         jt.update(sql, null, asset.getTitle(), asset.getAuthor(), asset.getAuthor2(), asset.getAuthor3(), asset.getPublicationYear(), asset.getSeries(), asset.getSeriesSequence(), asset.getAcquisitionDate(), asset.getAltTitle1(), asset.getAltTitle2(), asset.getEbookS3ObjectKey(), asset.getAudiobookS3ObjectKey());
         // TODO: tags
     }
@@ -238,5 +240,50 @@ public class LibraryDAO {
         for (var tag : tags) {
             jt.update("insert into tags(asset_id, tag) values (?, ?)", assetId, tag);
         }
+    }
+
+    // HELPER METHODS BELOW HERE
+
+    /**
+     * Returns the enumeration names as a comma-separated string.
+     * @param enumClass  The enumeration to convert
+     * @return  a comma-separated string of enumeration values
+     */
+    protected static String commaSeparated(Class<? extends  Enum<?>> enumClass) {
+        return Arrays.stream(enumClass.getEnumConstants()).map(Enum::toString).collect(Collectors.joining(","));
+    }
+
+    /**
+     * Returns a comma-separated string of question marks for use in SQL queries.
+     * The number of question marks will match the number of values in the enumeration.
+     * @param enumClass  The enumeration to evaluate.
+     * @return a comma-separated string of question marks
+     */
+    protected static String questionMarks(Class<? extends  Enum<?>> enumClass) {
+        return String.join(",", Collections.nCopies(enumClass.getEnumConstants().length, "?"));
+    }
+
+    /**
+     * Returns the enumeration names as a comma-separated string, using a provided prefix
+     * delimited with a period. Using the prefix "a", for example, returns a string like
+     * a.enum_one, a.enum_two, etc.
+     * @param enumClass  The enumeration to evaluate
+     * @param tableId  The prefix to prepend before each column name.
+     * @return the column names
+     */
+    protected static String commaSeparated(Class<? extends  Enum<?>> enumClass, String tableId) {
+        return Arrays.stream(enumClass.getEnumConstants()).map(e -> tableId + "." + e.toString()).collect(Collectors.joining(","));
+    }
+
+    /**
+     * Pre-pends a table id to an enumeration value with a period delimiter.
+     * ASSET_COL.id, for example, would yield "a.id" given a table id of "a".
+     *
+     * @param e  An enumeration value.
+     * @param tableId  A table identifier
+     * @return  The string value of the enumeration with the table id prepended.
+     */
+    protected static String withTableId(Enum<?> e, String tableId) {
+        return tableId + "." + e.toString();
     }
 }

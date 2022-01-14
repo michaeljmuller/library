@@ -6,12 +6,18 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.stereotype.Service;
 import org.themullers.library.db.LibraryDAO;
 
+import java.util.LinkedList;
+
 @Service
 public class Authenticator implements AuthenticationManager {
+
+    public static final String BAD_PW = "Unknown user or password";
 
     LibraryDAO dao;
 
@@ -22,16 +28,33 @@ public class Authenticator implements AuthenticationManager {
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-        var un = authentication.getPrincipal();
-        var pw = authentication.getCredentials();
+        var email = authentication.getPrincipal();
+        var password = authentication.getCredentials();
         var encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
-        var auth = new UsernamePasswordAuthenticationToken(un, pw, authentication.getAuthorities());
 
-        if (!"mike".equals(authentication.getPrincipal())) {
-            throw new BadCredentialsException("go away");
+        // get info about the user whose email address matches the one entered in the login dialog
+        var user = dao.fetchUser(email.toString());
+
+        // if we can't find a user with a matching password, reject the login
+        if (user == null) {
+            throw new BadCredentialsException(BAD_PW);
         }
 
-        return auth;
+        // if the passwords don't match, reject the login
+        if (!encoder.matches(password.toString(), user.getPassword())) {
+            throw new BadCredentialsException(BAD_PW);
+        }
+
+        // if the user is me, grant administrative authority
+        var authorities = new LinkedList<GrantedAuthority>();
+        if ("mike@themullers.org".equals(email)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_admin"));
+        }
+
+        // build an authentication token for use
+        var authToken = new UsernamePasswordAuthenticationToken(email, password, authorities);
+        authToken.setDetails(user);
+        return authToken;
     }
 
     public static void main(String args[]) {

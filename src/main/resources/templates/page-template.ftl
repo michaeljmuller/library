@@ -9,26 +9,22 @@
     </head>
     <body>
 
-    <form id="logoutform" action="/logout" method="post"><input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"></form>
+        <form id="logoutform" action="/logout" method="post"><input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"></form>
 
-    <div class="menu">
-        <a href="/">home</a>
-        <a href="/authors">authors</a>
-        <a href="/tags">tags</a>
-        <a href="/metadata">metadata</a>
-        <a href="javascript:;" onclick="document.getElementById('logoutform').submit()">logout</a>
-        <a class="profile" href="/profile">profile</a>
-    </div>
+        <div class="menu">
+            <a href="/">home</a>
+            <a href="/authors">authors</a>
+            <a href="/tags">tags</a>
+            <a href="/metadata">metadata</a>
+            <a href="javascript:;" onclick="document.getElementById('logoutform').submit()">logout</a>
+            <a class="profile" href="/profile">profile</a>
+        </div>
 
-    <div class="title">${title?html}</div>
+        <div class="title">${title?html}</div>
 
-    <div class="page-content">
-        <#nested/>
-    </div>
-
-    <!--
-    <div>footer</div>
-    -->
+        <div class="page-content">
+            <#nested/>
+        </div>
 
     </body>
 </html>
