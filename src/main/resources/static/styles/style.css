@@ -27,6 +27,9 @@ body {
     background-color: cyan;
     margin-bottom: 25px;
     padding: 10px;
+    background: url("/images/books.jpeg") 50% fixed;
+    background-size: cover;
+    color: white;
 }
 
 .page-content {

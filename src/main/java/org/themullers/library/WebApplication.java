@@ -169,7 +169,7 @@ public class WebApplication {
 
     @GetMapping("/login")
     public ModelAndView login(@RequestParam(value="error", required=false) String error, @RequestParam(value="logout", required=false) String logout) {
-        var mv = new LibraryModelAndView("/niceLogin");
+        var mv = new LibraryModelAndView("/login");
         if (logout != null) {
             mv.addObject("msg", "You have been logged out.");
         }

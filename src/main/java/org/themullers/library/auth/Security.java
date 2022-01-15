@@ -25,6 +25,9 @@ public class Security extends WebSecurityConfigurerAdapter {
             // you don't need to be logged in to get to the login or "forgot pw/pw reset" pages
             conf.antMatchers("/pw*", "/login*").permitAll();
 
+            // also allow everyone access to the static resources
+            conf.antMatchers("/styles/**", "/images/**").permitAll();
+
             // everything else requires you to be logged in
             conf.anyRequest().authenticated();
         });

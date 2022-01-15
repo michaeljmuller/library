@@ -1,5 +1,5 @@
-<#import "new-page-template.ftl" as c/>
+<#import "page-template.ftl" as c/>
 
-<@c.page title="E-book and Audiobook Library">
+<@c.page title="Mike's eBook and Audiobook Library">
     Check it out.
 </@c.page>
