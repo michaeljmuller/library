@@ -83,8 +83,7 @@ public class LibraryDAO {
      * @return  list of assets
      */
     public List<Asset> fetchAssetsForAuthor(String author) {
-        String sql = String.format("select %s , group_concat(t.tag separator ',') as tags from assets a inner join tags t on a.id = t.asset_id where a.author = ? group by a.id", commaSeparated(ASSET_COLS.class, "a"));
-        System.out.println(sql);
+        String sql = String.format("select %s , group_concat(t.tag separator ',') as tags from assets a left outer join tags t on a.id = t.asset_id where a.author = ? group by a.id", commaSeparated(ASSET_COLS.class, "a"));
         return jt.query(sql, LibraryDAO::mapAsset, author);
     }
 
@@ -140,9 +139,15 @@ public class LibraryDAO {
         asset.setEbookS3ObjectKey(rs.getString(withTableId(ASSET_COLS.ebook_s3_object_key, "a")));
         asset.setAudiobookS3ObjectKey(rs.getString(withTableId(ASSET_COLS.audiobook_s3_object_key, "a")));
 
-        // handle tags differently because we joined them into the result set as CSV
-        for (var tag : rs.getString("tags").split(",")) {
-            asset.addTag(tag);
+        // if there are any tags associated with this asset
+        // (handle tags differently because we joined them into the result set as CSV)
+        var tags = rs.getString("tags");
+        if (tags != null && tags.trim().length() > 0) {
+
+            // parse the comma-separated list of tags
+            for (var tag : tags.split(",")) {
+                asset.addTag(tag);
+            }
         }
 
         return asset;

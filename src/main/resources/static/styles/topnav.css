@@ -1,0 +1,76 @@
+/* from https://codepen.io/andornagy/pen/xhiJH */
+
+@import url(https://fonts.googleapis.com/css?family=Open+Sans);
+@import url(https://fonts.googleapis.com/css?family=Bree+Serif);
+
+body {
+    font-family: 'Open Sans', sans-serif;
+}
+
+#container {
+    margin: 0 auto;
+}
+
+#container nav {
+    background-color: black;
+}
+
+#container nav ul {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    position: relative;
+}
+
+#container nav ul li {
+    display:inline-block;
+    background-color: black;
+}
+
+#container nav a {
+    display: block;
+    padding: 0 10px;
+    color: white;
+    font-size: 14px;
+    line-height: 40px;
+    text-decoration: none;
+}
+
+#container nav a:hover {
+    background-color: #777;
+}
+
+#container .right {
+    float: right;
+}
+
+/* Hide Dropdowns by Default */
+#container nav ul ul {
+    display: none;
+    position: absolute;
+    top: 40px; /* the height of the main nav */
+}
+
+/* Display Dropdowns on Hover */
+#container nav ul li:hover > ul {
+    display:inherit;
+}
+
+/* Fisrt Tier Dropdown */
+#container nav ul ul li {
+    width:170px;
+    float:none;
+    display:list-item;
+    position: relative;
+}
+
+/* Second, Third and more Tiers	*/
+#container nav ul ul ul li {
+    position: relative;
+    top:-60px;
+    left:170px;
+}
+
+/* Change this in order to change the Dropdown symbol */
+#container li > a:after { content:  ''; }
+#container li > a:only-child:after { content: ''; }
