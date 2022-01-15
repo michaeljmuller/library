@@ -102,4 +102,95 @@ td.book-info {
 .morebooks {
     text-align: right;
     white-space: nowrap;
+    padding-right: 2em;
 }
+
+a:link {
+    color: black;
+}
+
+a:visited {
+    color: black;
+}
+
+/* RESPONSIVE LAYOUT FOR BOOKS */
+/* fits books in a row based on browser width */
+
+/* This is the hierarchy of the html being styled:
+
+book-grid-container (contains all the books)
+  book-grid-item (each book)
+    cover-image-container (left)
+      img
+    book-info (right)
+      book-info-text (top)
+        book-info-section
+          book-info-title
+          book-info-author
+          book-info-series
+          book-info-pub-year
+        book-info-tags
+        book-info-acq-date
+      book-info-links (bottom)
+        book-action-icon
+        book-action-icon
+        book-action-icon
+ */
+
+.book-grid-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: left;
+    gap: 10px;
+}
+
+.book-grid-item {
+    width: 28em;
+    font-size: 12px;
+    display: flex;
+}
+
+.book-grid-item .book-info {
+    position: relative; /* so we can put the action icons at the bottom */
+    padding-left: 1em; /* so there's space between the cover image and the text */
+    flex: 1;
+    height: 100%;
+}
+
+.cover-image-container {
+    flex: 1;
+}
+
+.cover-image-container img {
+    width: 100%;
+    max-height: 100%;
+    object-fit: cover;
+    overflow: hidden;
+    border-radius: 1em;
+}
+
+.book-info-text {
+    padding-bottom: 3em;
+    display: grid;
+    grid-gap: 1em;
+}
+
+.book-info-title {
+    font-weight: bold;
+}
+
+.book-info-acq-date {
+    font-style: italic;
+}
+
+.book-info-links {
+    position: absolute;
+    bottom: 0;
+    padding-bottom: 0.5em;
+}
+
+.book-action-icon {
+    height: 2em;
+    max-width: 100%;
+}
+

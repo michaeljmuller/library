@@ -1,0 +1,9 @@
+- add stats on main page
+- conditionally display audiobook icon
+- implement audiobook searches
+- implement downloads
+- set up ci/cd
+- implement asset upload
+- implement mobile layout
+- resize image assets (smaller for faster load)
+- series not displaying in order
