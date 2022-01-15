@@ -39,11 +39,20 @@ public class WebApplication {
 
     /**
      * Handle a request to render the application's home page.
+     * The home page displays the most recently added assets.
+     * @page can be a number > 1 to display more (older) assets
      * @return  information needed to render the home page
      */
     @GetMapping("/")
-    public ModelAndView home() {
-        return new LibraryModelAndView("home");
+    public ModelAndView home(@RequestParam(name="page", required=false, defaultValue="1") int page) {
+        var mv = new LibraryModelAndView("home");
+
+        // get the most recent assets
+        int assetsPerPage = 6;
+        var newReleases = dao.fetchNewestAssets(assetsPerPage, page*assetsPerPage);
+        mv.addObject("page", page);
+        mv.addObject("assets", newReleases);
+        return mv;
     }
 
     /**

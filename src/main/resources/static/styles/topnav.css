@@ -77,3 +77,14 @@ body {
 /* Change this in order to change the Dropdown symbol */
 #container li > a:after { content:  ''; }
 #container li > a:only-child:after { content: ''; }
+
+#title {
+    font-weight: bold;
+    font-size: 200%;
+    background-color: cyan;
+    margin-bottom: 25px;
+    padding: 10px;
+    background: url("/images/books.jpeg") 50% fixed;
+    background-size: cover;
+    color: white;
+}

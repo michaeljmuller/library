@@ -4,41 +4,15 @@ body {
     margin: 0px;
 }
 
-.menu {
-    background-color: black;
-    padding: 5px;
-    font-weight: bold;
-}
-
-.menu a {
-    color: white;
-    text-decoration: none;
-    padding-left: 10px;
-    padding-right: 10px;
-}
-
-.menu a.profile {
-    float: right;
-}
-
-.title {
-    font-weight: bold;
-    font-size: 200%;
-    background-color: cyan;
-    margin-bottom: 25px;
-    padding: 10px;
-    background: url("/images/books.jpeg") 50% fixed;
-    background-size: cover;
-    color: white;
-}
-
 .page-content {
     margin-left: 20px;
+    margin-right: 20px;
 }
 
 .author-table td {
     padding-left: 10px;
     padding-right: 10px;
+    vertical-align: top;
 }
 
 .asset-table td img {
@@ -46,9 +20,17 @@ body {
 }
 
 td.book-info {
-    vertical-align: top;
-    padding: 10px;
+    font-size: 12px;
     width: 250px;
+    padding-left: 10px;
+}
+
+.asset-table td {
+    vertical-align: top;
+}
+
+.pub-year {
+    padding-bottom: 10px;
 }
 
 .book-title {
@@ -61,6 +43,14 @@ td.book-info {
     background-color: lightgrey;
     margin-bottom: 15px;
     margin-top: 15px;
+}
+
+.asset-table .links {
+    padding-top: 15px;
+}
+
+.asset-table .links img {
+    max-width: 25px;
 }
 
 .message {
@@ -107,4 +97,9 @@ td.book-info {
     padding: 10px;
     font-family: monospace;
     background-color: #f0f0f0;
+}
+
+.morebooks {
+    text-align: right;
+    white-space: nowrap;
 }

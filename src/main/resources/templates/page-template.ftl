@@ -36,10 +36,10 @@
                     </li>
                 </ul>
             </nav>
-            <div class="title">${title?html}</div>
-            <div>
-                <#nested/>
-            </div>
+            <div id="title">${title?html}</div>
+        </div>
+        <div class="page-content">
+            <#nested/>
         </div>
     </body>
 </html>
