@@ -21,7 +21,7 @@
                         <div class="book-info-acq-date">Added ${book.acquisitionDate}</div>
                     </div>
                     <div class="book-info-links">
-                        <a href="#"><img class="book-action-icon" src="/images/amazon.png"></a>&nbsp;
+                        <a href="https://www.amazon.com/s?k=${book.author?url}%20${book.title?url}"><img class="book-action-icon" src="/images/amazon.png"></a>&nbsp;
                         <a href="#"><img class="book-action-icon" src="/images/download.png"></a>&nbsp;
                         <a href="#"><img class="book-action-icon" src="/images/audiobook.png"></a>
                     </div>

@@ -15,44 +15,6 @@ body {
     vertical-align: top;
 }
 
-.asset-table td img {
-    max-width: 100px;
-}
-
-td.book-info {
-    font-size: 12px;
-    width: 250px;
-    padding-left: 10px;
-}
-
-.asset-table td {
-    vertical-align: top;
-}
-
-.pub-year {
-    padding-bottom: 10px;
-}
-
-.book-title {
-    font-weight: bold;
-}
-
-.asset-table tr.series td div {
-    font-weight: bold;
-    padding: 5px;
-    background-color: lightgrey;
-    margin-bottom: 15px;
-    margin-top: 15px;
-}
-
-.asset-table .links {
-    padding-top: 15px;
-}
-
-.asset-table .links img {
-    max-width: 25px;
-}
-
 .message {
     font-weight: bold;
 }
