@@ -10,7 +10,7 @@
                         <div class="book-info-section">
                             <div class="book-info-title">${book.title}</div>
                             <div class="book-info-author">${book.author}</div>
-                            <#if book.seriesSequence gt 0>
+                            <#if book.seriesSequence?default(0) gt 0>
                                 <div class="book-info-series">${book.series} #${book.seriesSequence}</div>
                             </#if>
                             <div class="book-info-pub-year">${book.publicationYear?c}</div>
@@ -22,8 +22,10 @@
                     </div>
                     <div class="book-info-links">
                         <a href="https://www.amazon.com/s?k=${book.author?url}%20${book.title?url}"><img class="book-action-icon" src="/images/amazon.png"></a>&nbsp;
-                        <a href="#"><img class="book-action-icon" src="/images/download.png"></a>&nbsp;
-                        <a href="#"><img class="book-action-icon" src="/images/audiobook.png"></a>
+                        <a href="/book?id=${book.id?c}"><img class="book-action-icon" src="/images/download.png"></a>&nbsp;
+                        <#if book.audiobook_s3_object_id??>
+                            <a href="/audiobook?id=${book.id?c}"><img class="book-action-icon" src="/images/audiobook.png"></a>
+                        </#if>
                     </div>
                 </div>
             </div>

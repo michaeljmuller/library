@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataRetrievalFailureException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.themullers.library.Asset;
@@ -12,6 +13,7 @@ import org.themullers.library.User;
 import java.sql.Blob;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -58,13 +60,33 @@ public class LibraryDAO {
     // READ-ONLY METHODS
 
     /**
+     * Returns the S3 object key for the ebook with the given asset ID.
+     * @param assetId  the database ID of the ebook
+     * @return  the ebook's S3 object key
+     */
+    public String fetchEbookObjectKey(int assetId) {
+        String sql = "select ebook_s3_object_key from assets where id = ?";
+        return jt.queryForObject(sql, String.class, assetId);
+    }
+
+    /**
+     * Returns the S3 object key for the audiobook with the given asset ID.
+     * @param assetId  the database ID of the audiobook
+     * @return  the audiobook's S3 object key
+     */
+    public String fetchAudiobookObjectKey(int assetId) {
+        String sql = "select audiobook_s3_object_key from assets where id = ?";
+        return jt.queryForObject(sql, String.class, assetId);
+    }
+
+    /**
      * Returns information about the user with a given email address.
      * @param email  The email address associated with the user to find.
      * @return  Information about the specified user.
      */
     public User fetchUser(String email) {
-        String sql = String.format("select %s from users where email = '%s' limit 1", commaSeparated(USER_COLS.class), email);
-        var users = jt.query(sql, LibraryDAO::mapUser);
+        String sql = String.format("select %s from users where email = ? limit 1", commaSeparated(USER_COLS.class), email);
+        var users = jt.query(sql, LibraryDAO::mapUser, email);
         return users == null || users.size() == 0 ? null : users.get(0);
     }
 
@@ -73,7 +95,7 @@ public class LibraryDAO {
      * @return  list of assets
      */
     public List<Asset> fetchAllAssets() {
-        String sql = String.format("select %s, group_concat(t.tag separator ',') as tags from assets a inner join tags t on a.id = t.asset_id group by a.id", commaSeparated(ASSET_COLS.class, "a"));
+        String sql = String.format("select %s, group_concat(t.tag separator ',') as tags from assets a left outer join tags t on a.id = t.asset_id group by a.id", commaSeparated(ASSET_COLS.class, "a"));
         return jt.query(sql, LibraryDAO::mapAsset);
     }
 
@@ -95,7 +117,7 @@ public class LibraryDAO {
      * @return  a list of assets
      */
     public List<Asset> fetchNewestAssets(int limit, int skip) {
-        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags from assets a inner join tags t on a.id = t.asset_id group by a.id order by acq_date desc limit %s offset %s", commaSeparated(ASSET_COLS.class, "a"), limit, skip);
+        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags from assets a left outer join tags t on a.id = t.asset_id group by a.id order by acq_date desc limit %s offset %s", commaSeparated(ASSET_COLS.class, "a"), limit, skip);
         return jt.query(sql, LibraryDAO::mapAsset);
     }
 
@@ -125,14 +147,14 @@ public class LibraryDAO {
         var asset = new Asset();
 
         // read columns from the result set, write to properties of the object
-        asset.setId(rs.getInt(withTableId(ASSET_COLS.id, "a")));
+        asset.setId(getIntOrNull(rs, withTableId(ASSET_COLS.id, "a")));
         asset.setTitle(rs.getString(withTableId(ASSET_COLS.title, "a")));
         asset.setAuthor(rs.getString(withTableId(ASSET_COLS.author, "a")));
         asset.setAuthor2(rs.getString(withTableId(ASSET_COLS.author2, "a")));
         asset.setAuthor3(rs.getString(withTableId(ASSET_COLS.author3, "a")));
         asset.setPublicationYear(rs.getInt(withTableId(ASSET_COLS.pub_year, "a")));
         asset.setSeries(rs.getString(withTableId(ASSET_COLS.series, "a")));
-        asset.setSeriesSequence(rs.getInt(withTableId(ASSET_COLS.series_sequence, "a")));
+        asset.setSeriesSequence(getIntOrNull(rs, withTableId(ASSET_COLS.series_sequence, "a")));
         asset.setAcquisitionDate(rs.getDate(withTableId(ASSET_COLS.acq_date, "a")));
         asset.setAltTitle1(rs.getString(withTableId(ASSET_COLS.alt_title1, "a")));
         asset.setAltTitle2(rs.getString(withTableId(ASSET_COLS.alt_title2, "a")));
@@ -151,6 +173,11 @@ public class LibraryDAO {
         }
 
         return asset;
+    }
+
+    protected static Integer getIntOrNull(ResultSet rs, String col) throws SQLException {
+        var value = rs.getInt(col);
+        return rs.wasNull() ? null : value;
     }
 
     /**
@@ -213,13 +240,44 @@ public class LibraryDAO {
 
     /**
      * Inserts an asset into the database.
+     * @return  the id (primary key) of the new asset row
      * @param asset  the asset to insert
      */
     @Transactional
-    public void insertAsset(Asset asset) {
+    public int insertAsset(Asset asset) {
+        var keyHolder = new GeneratedKeyHolder();
         String sql = String.format("insert into assets (%s) values (%s)", commaSeparated(ASSET_COLS.class), questionMarks(ASSET_COLS.class));
-        jt.update(sql, null, asset.getTitle(), asset.getAuthor(), asset.getAuthor2(), asset.getAuthor3(), asset.getPublicationYear(), asset.getSeries(), asset.getSeriesSequence(), asset.getAcquisitionDate(), asset.getAltTitle1(), asset.getAltTitle2(), asset.getEbookS3ObjectKey(), asset.getAudiobookS3ObjectKey());
-        // TODO: tags
+        jt.update(c -> {
+            var ps = c.prepareStatement(sql);
+            ps.setNull(1, Types.INTEGER);
+            ps.setString(2, asset.getTitle());
+            ps.setString(3, asset.getAuthor());
+            ps.setString(4, asset.getAuthor2());
+            ps.setString(5, asset.getAuthor3());
+            ps.setInt(6, asset.getPublicationYear());
+            ps.setString(7, asset.getSeries());
+            ps.setInt(8, asset.getSeriesSequence());
+            ps.setDate(9, toSqlDate(asset.getAcquisitionDate()));
+            ps.setString(10, asset.getAltTitle1());
+            ps.setString(11, asset.getAltTitle2());
+            ps.setString(12, asset.getEbookS3ObjectKey());
+            ps.setString(13, asset.getAudiobookS3ObjectKey());
+            return ps;
+        }, keyHolder);
+
+        // get the id of the newly-created asset row
+        var assetId = keyHolder.getKey().intValue();
+
+        // insert the asset's tags
+        for (var tag : asset.getTags()) {
+            jt.update("insert into tags(asset_id, tag) values (?, ?)", assetId, tag);
+        }
+
+        return assetId;
+    }
+
+    protected java.sql.Date toSqlDate(Date date) {
+        return date == null ? null : new java.sql.Date(date.getTime());
     }
 
     /**
@@ -247,6 +305,12 @@ public class LibraryDAO {
         }
     }
 
+    @Transactional
+    public void updateAsset(Asset asset) {
+        var sql = String.format("update assets set %s where id = ?", updateSql(ASSET_COLS.class));
+        jt.update(sql, asset.getId(), asset.getTitle(), asset.getAuthor(), asset.getAuthor2(), asset.getAuthor3(), asset.getPublicationYear(), asset.getSeries(), asset.getSeriesSequence(), asset.getAcquisitionDate(), asset.getAltTitle1(), asset.getAltTitle2(), asset.getEbookS3ObjectKey(), asset.getAudiobookS3ObjectKey(), asset.getId());
+    }
+
     // HELPER METHODS BELOW HERE
 
     /**
@@ -254,7 +318,7 @@ public class LibraryDAO {
      * @param enumClass  The enumeration to convert
      * @return  a comma-separated string of enumeration values
      */
-    protected static String commaSeparated(Class<? extends  Enum<?>> enumClass) {
+    protected static String commaSeparated(Class<? extends Enum<?>> enumClass) {
         return Arrays.stream(enumClass.getEnumConstants()).map(Enum::toString).collect(Collectors.joining(","));
     }
 
@@ -264,7 +328,7 @@ public class LibraryDAO {
      * @param enumClass  The enumeration to evaluate.
      * @return a comma-separated string of question marks
      */
-    protected static String questionMarks(Class<? extends  Enum<?>> enumClass) {
+    protected static String questionMarks(Class<? extends Enum<?>> enumClass) {
         return String.join(",", Collections.nCopies(enumClass.getEnumConstants().length, "?"));
     }
 
@@ -276,8 +340,12 @@ public class LibraryDAO {
      * @param tableId  The prefix to prepend before each column name.
      * @return the column names
      */
-    protected static String commaSeparated(Class<? extends  Enum<?>> enumClass, String tableId) {
+    protected static String commaSeparated(Class<? extends Enum<?>> enumClass, String tableId) {
         return Arrays.stream(enumClass.getEnumConstants()).map(e -> tableId + "." + e.toString()).collect(Collectors.joining(","));
+    }
+
+    protected static String updateSql(Class<? extends Enum<?>> enumClass) {
+        return Arrays.stream(enumClass.getEnumConstants()).map(e -> e + " = ?").collect(Collectors.joining(","));
     }
 
     /**

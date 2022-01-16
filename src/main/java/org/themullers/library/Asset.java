@@ -1,9 +1,6 @@
 package org.themullers.library;
 
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * A simple Java class containing information about one of the library's assets.
@@ -135,4 +132,30 @@ public class Asset {
     public Collection<String> getTags() {
         return tags;
     }
+
+    public void setTags(Collection<String> tags) {
+        this.tags = new HashSet<>(tags);
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (object instanceof Asset other) {
+            return Utils.objectsAreEqual(this.id, other.id) &&
+                    Utils.objectsAreEqual(this.title, other.title) &&
+                    Utils.objectsAreEqual(this.author, other.author) &&
+                    Utils.objectsAreEqual(this.author2, other.author2) &&
+                    Utils.objectsAreEqual(this.publicationYear, other.publicationYear) &&
+                    Utils.objectsAreEqual(this.series, other.series) &&
+                    Utils.objectsAreEqual(this.seriesSequence, other.seriesSequence) &&
+                    Utils.objectsAreEqual(this.acquisitionDate, other.acquisitionDate) &&
+                    Utils.objectsAreEqual(this.altTitle1, other.altTitle1) &&
+                    Utils.objectsAreEqual(this.ebookS3ObjectKey, other.ebookS3ObjectKey) &&
+                    Utils.objectsAreEqual(this.audiobookS3ObjectKey, other.audiobookS3ObjectKey) &&
+                    Utils.objectsAreEqual(this.tags, other.tags); // note: set equals() ignores order https://docs.oracle.com/javase/6/docs/api/java/util/Set.html#equals(java.lang.Object)
+        }
+        else {
+            return false;
+        }
+    }
+
 }

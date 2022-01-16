@@ -1,5 +1,6 @@
 package org.themullers.library;
 
+import com.amazonaws.services.s3.model.S3Object;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -10,7 +11,9 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import org.themullers.library.db.LibraryDAO;
+import org.themullers.library.s3.LibraryOSAO;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
@@ -22,10 +25,12 @@ import java.io.IOException;
 public class WebApplication {
 
     LibraryDAO dao;
+    LibraryOSAO osao;
 
     @Autowired
-    public WebApplication(LibraryDAO dao) {
+    public WebApplication(LibraryDAO dao, LibraryOSAO osao) {
         this.dao = dao;
+        this.osao = osao;
     }
 
     /**
@@ -186,6 +191,65 @@ public class WebApplication {
             mv.addObject("msg", "Invalid login; please try again.");
         }
         return mv;
+    }
+
+    @GetMapping(value = "/book", produces = "application/epub+zip")
+    public void getEbook(@RequestParam(value="id") int assetId, HttpServletResponse response) throws IOException {
+        var id = dao.fetchEbookObjectKey(assetId);
+        var obj = osao.readObject(id);
+        writeS3ObjectToResponse(obj, response);
+    }
+
+    @GetMapping(value = "/audiobook", produces = "application/epub+zip")
+    public void getAudiobook(@RequestParam(value="id") int assetId, HttpServletResponse response) throws IOException {
+        var id = dao.fetchAudiobookObjectKey(assetId);
+        var obj = osao.readObject(id);
+        writeS3ObjectToResponse(obj, response);
+    }
+
+    /**
+     * Writes an S3 object to an HTTP response object
+     * @param obj  the S3 object to write
+     * @param response  the HTTP response object to write to
+     * @throws IOException  thrown if an unexpected error occurs writing to the response
+     */
+    protected void writeS3ObjectToResponse(S3Object obj, HttpServletResponse response) throws IOException {
+
+        // escape any quotation marks in the filename with a backslash
+        var filename = obj.getKey();
+        var escapedFilename = filename.replace("\"", "\\\"");
+
+        // build the content disposition
+        var disposition = String.format("attachment; filename=\"%s\"", escapedFilename);
+
+        // convert the content length from the object metadata into an int as required by the servlet response object
+        var contentLength = Math.toIntExact(obj.getObjectMetadata().getContentLength());
+
+        // figure out a mime type based on the file's extension
+        var mimeType = mimeTypeForFile(filename);
+
+        // write the S3 object info to the response
+        response.setContentLength(contentLength);
+        response.setContentType(mimeType);
+        response.setHeader("Content-Disposition", disposition);
+        obj.getObjectContent().transferTo(response.getOutputStream());
+        response.flushBuffer();
+    }
+
+    /**
+     * determine a file's mime type based on its extension
+     * @param filename  a filename
+     * @return  the mime type
+     */
+    public String mimeTypeForFile(String filename) {
+        if (filename.toLowerCase().endsWith(".epub")) {
+            return "application/epub+zip";
+        }
+        else if (filename.toLowerCase().endsWith(".m4b")) {
+            return "audio/mp4a-latm";
+        }
+
+        throw new RuntimeException("can't determine mime type for file " + filename);
     }
 
     class LibraryModelAndView extends ModelAndView {

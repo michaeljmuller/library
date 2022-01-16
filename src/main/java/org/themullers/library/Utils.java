@@ -16,4 +16,13 @@ public class Utils {
     public static <T> T ifNull(T maybeNull, T notNull) {
         return maybeNull == null ?  notNull : maybeNull;
     }
+
+    protected static boolean objectsAreEqual(Object a, Object b) {
+        boolean areEqual =  a == null ? b == null : a.equals(b);
+        if (!areEqual) {
+            System.out.println(String.format("objects differ; %s != %s", a, b));
+        }
+        return areEqual;
+    }
+
 }

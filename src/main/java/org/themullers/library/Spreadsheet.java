@@ -11,6 +11,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Date;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class Spreadsheet {
@@ -21,6 +23,11 @@ public class Spreadsheet {
     public static final short EXCEL_BUILTIN_MDY_FORMAT = 0xe;
 
     public static void toDatabase(LibraryDAO dao, byte[] spreadsheet) throws IOException {
+
+        // get all the assets from the database, indexed by asset id
+        var dbAssetList = dao.fetchAllAssets();
+        var dbAssetMap = dbAssetList.stream().collect(Collectors.toMap(Asset::getId, Function.identity()));
+
         try (var bais = new ByteArrayInputStream(spreadsheet)) {
             var wb = new XSSFWorkbook(bais);
             var sheet = wb.getSheet(SHEET_NAME);
@@ -33,38 +40,75 @@ public class Spreadsheet {
                     continue;
                 }
 
-                var asset = new Asset();
-                asset.setId(row.getIntValue(Column.DBID));
-                asset.setTitle(row.getStringValue(Column.TITLE));
-                asset.setAuthor(row.getStringValue(Column.AUTHOR));
-                asset.setAuthor2(row.getStringValue(Column.AUTHOR2));
-                asset.setAuthor3(row.getStringValue(Column.AUTHOR3));
-                asset.setPublicationYear(row.getIntValue(Column.PUB_YEAR));
-                String series = row.getStringValue(Column.SERIES);
-                if (series != null && series.trim().length() > 0) {
-                    asset.setSeries(series);
-                    asset.setSeriesSequence(row.getIntValue(Column.SERIES_SEQUENCE));
+                // if the asset in this row matches the asset with the same ID from the database, no changes are necessary
+                var ssAsset = createAssetFromSpreadsheet(row);
+                var dbAsset = dbAssetMap.get(ssAsset.getId());
+                if (ssAsset.equals(dbAsset)) {
+                    System.out.println(String.format("assets match, no update necessary: id %d, title %s", ssAsset.getId(), ssAsset.getEbookS3ObjectKey()));
                 }
-                asset.setAcquisitionDate(row.getDateValue(Column.ACQ_DATE));
-                asset.setAltTitle1(row.getStringValue(Column.ALT_TITLE1));
-                asset.setAltTitle2(row.getStringValue(Column.ALT_TITLE2));
-                asset.setEbookS3ObjectKey(row.getStringValue(Column.EBOOK_S3_OBJ_KEY));
-                asset.setAudiobookS3ObjectKey(row.getStringValue(Column.AUDIOBOOK_S3_OBJ_KEY));
 
-                // split the comma-separated tags and add them to the asset's list individually
-                String tagCSV = row.getStringValue(Column.TAGS);
-                if (tagCSV != null && tagCSV.trim().length() > 0) {
-                    var tagArray = tagCSV.split(",");
-                    for (var tag : tagArray) {
-                        asset.addTag(tag.trim());
+                // the assets don't match; some inserting/updating is required
+                else {
+                    // if the asset doesn't exist in the database then insert it
+                    if (dbAsset == null) {
+                        System.out.println(String.format("new asset, inserting: title %s", ssAsset.getEbookS3ObjectKey()));
+                        //dao.insertAsset(ssAsset);
+                    }
+
+                    // the asset does exist; something needs to be updated
+                    else {
+
+                        // start by seeing if the tags differ
+                        var ssTags = ssAsset.getTags();
+                        var dbTags = dbAsset.getTags();
+                        if (!Utils.objectsAreEqual(ssTags, dbTags)) {
+                            System.out.println(String.format("assets tags differ, setting new tags: id %d, title %s", ssAsset.getId(), ssAsset.getEbookS3ObjectKey()));
+                            //dao.setTags(ssAsset.getId(), ssTags);
+                            dbAsset.setTags(ssTags);
+                        }
+
+                        // now that we've updated the tags, do we need to update the asset itself?
+                        if (!ssAsset.equals(dbAsset)) {
+                            System.out.println(String.format("assets metadata differs, updating: id %d, title %s", ssAsset.getId(), ssAsset.getEbookS3ObjectKey()));
+                            //dao.updateAsset(ssAsset);
+                        }
                     }
                 }
-
-                // update the asset with the tags from the spreadsheet
-                dao.setTags(asset.getId(), asset.getTags());
             }
 
         }
+    }
+
+    protected static Asset createAssetFromSpreadsheet(AssetRow row) {
+
+        var asset = new Asset();
+        asset.setId(row.getIntValue(Column.DBID));
+        asset.setTitle(row.getStringValue(Column.TITLE));
+        asset.setAuthor(row.getStringValue(Column.AUTHOR));
+        asset.setAuthor2(row.getStringValue(Column.AUTHOR2));
+        asset.setAuthor3(row.getStringValue(Column.AUTHOR3));
+        asset.setPublicationYear(row.getIntValue(Column.PUB_YEAR));
+        String series = row.getStringValue(Column.SERIES);
+        if (series != null && series.trim().length() > 0) {
+            asset.setSeries(series);
+            asset.setSeriesSequence(row.getIntValue(Column.SERIES_SEQUENCE));
+        }
+        asset.setAcquisitionDate(row.getDateValue(Column.ACQ_DATE));
+        asset.setAltTitle1(row.getStringValue(Column.ALT_TITLE1));
+        asset.setAltTitle2(row.getStringValue(Column.ALT_TITLE2));
+        asset.setEbookS3ObjectKey(row.getStringValue(Column.EBOOK_S3_OBJ_KEY));
+        asset.setAudiobookS3ObjectKey(row.getStringValue(Column.AUDIOBOOK_S3_OBJ_KEY));
+
+        // split the comma-separated tags and add them to the asset's list individually
+        String tagCSV = row.getStringValue(Column.TAGS);
+        if (tagCSV != null && tagCSV.trim().length() > 0) {
+            var tagArray = tagCSV.split(",");
+            for (var tag : tagArray) {
+                asset.addTag(tag.trim());
+            }
+        }
+
+        return asset;
     }
 
     public static byte[] fromDatabase(LibraryDAO dao) throws IOException {

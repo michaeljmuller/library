@@ -4,6 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class LibUtils {
 
@@ -47,6 +49,10 @@ public class LibUtils {
         }
 
         return groupedAssets;
+    }
+
+    public static Map<Integer, Asset> indexAssetsById(List<Asset> assets) {
+        return assets.stream().collect(Collectors.toMap(Asset::getId, Function.identity()));
     }
 
 }

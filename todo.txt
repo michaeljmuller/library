@@ -1,9 +1,15 @@
+TO DO:
 - add stats on main page
-- conditionally display audiobook icon
 - implement audiobook searches
-- implement downloads
 - set up ci/cd
 - implement asset upload
-- implement mobile layout
 - resize image assets (smaller for faster load)
 - series not displaying in order
+- add column for amazon ASIN
+- improve metadata upload/sync functionality
+- display multiple authors in book list
+
+DONE:
+- conditionally display audiobook icon
+- implement downloads
+- implement mobile layout (responsive layout)
