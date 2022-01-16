@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: CI
+name: Build and deploy the library
 
 # Controls when the workflow will run
 on:
@@ -35,3 +35,13 @@ jobs:
       # Runs a single command using the runners shell
       - name: Run a one-line script
         run: mvn -B -DskipTests clean package
+
+      # Deploy the jar to the production server (but don't install it)
+      - name: send jar to themullers.org for deployment
+        uses: appleboy/scp-action@master
+        with:
+          host: themullers.org
+          username: github
+          password: ${{ secrets.DEPLOY_PW }}
+          source: target/*.jar
+          target: ./
