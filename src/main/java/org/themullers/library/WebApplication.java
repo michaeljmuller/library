@@ -14,7 +14,6 @@ import org.themullers.library.db.LibraryDAO;
 import org.themullers.library.s3.LibraryOSAO;
 
 import javax.servlet.http.HttpServletResponse;
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 /**
@@ -99,9 +98,7 @@ public class WebApplication {
      */
     @GetMapping(value = "/cover", produces = "image/jpeg")
     public byte[] cover(@RequestParam(name="book") String book) throws IOException {
-        try (var fos = new FileOutputStream("/Users/mmuller/Desktop/foo.jpeg")) {
-            return dao.fetchImageForEbook(book);
-        }
+        return dao.fetchImageForEbook(book);
     }
 
     /**
