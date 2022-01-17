@@ -84,7 +84,10 @@ body {
     background-color: cyan;
     margin-bottom: 25px;
     padding: 10px;
+    background-color: sienna;
+    /*
     background: url("/images/books.jpeg") 50% fixed;
+     */
     background-size: cover;
     color: white;
 }

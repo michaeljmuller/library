@@ -55,6 +55,7 @@ public class LibraryDAO {
         alt_title2,
         ebook_s3_object_key,
         audiobook_s3_object_key,
+        asin,
     }
 
     // READ-ONLY METHODS
@@ -160,6 +161,7 @@ public class LibraryDAO {
         asset.setAltTitle2(rs.getString(withTableId(ASSET_COLS.alt_title2, "a")));
         asset.setEbookS3ObjectKey(rs.getString(withTableId(ASSET_COLS.ebook_s3_object_key, "a")));
         asset.setAudiobookS3ObjectKey(rs.getString(withTableId(ASSET_COLS.audiobook_s3_object_key, "a")));
+        asset.setAmazonId(rs.getString(withTableId(ASSET_COLS.asin, "a")));
 
         // if there are any tags associated with this asset
         // (handle tags differently because we joined them into the result set as CSV)
@@ -262,6 +264,7 @@ public class LibraryDAO {
             ps.setString(11, asset.getAltTitle2());
             ps.setString(12, asset.getEbookS3ObjectKey());
             ps.setString(13, asset.getAudiobookS3ObjectKey());
+            ps.setString(14, asset.getAmazonId());
             return ps;
         }, keyHolder);
 
@@ -308,7 +311,10 @@ public class LibraryDAO {
     @Transactional
     public void updateAsset(Asset asset) {
         var sql = String.format("update assets set %s where id = ?", updateSql(ASSET_COLS.class));
-        jt.update(sql, asset.getId(), asset.getTitle(), asset.getAuthor(), asset.getAuthor2(), asset.getAuthor3(), asset.getPublicationYear(), asset.getSeries(), asset.getSeriesSequence(), asset.getAcquisitionDate(), asset.getAltTitle1(), asset.getAltTitle2(), asset.getEbookS3ObjectKey(), asset.getAudiobookS3ObjectKey(), asset.getId());
+        jt.update(sql, asset.getId(), asset.getTitle(), asset.getAuthor(), asset.getAuthor2(), asset.getAuthor3(),
+                asset.getPublicationYear(), asset.getSeries(), asset.getSeriesSequence(), asset.getAcquisitionDate(),
+                asset.getAltTitle1(), asset.getAltTitle2(), asset.getEbookS3ObjectKey(), asset.getAudiobookS3ObjectKey(),
+                asset.getAmazonId(), asset.getId());
     }
 
     // HELPER METHODS BELOW HERE

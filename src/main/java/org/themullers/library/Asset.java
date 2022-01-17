@@ -19,6 +19,8 @@ public class Asset {
     private String altTitle2;
     private String ebookS3ObjectKey;
     private String audiobookS3ObjectKey;
+    private String amazonId;
+
     private Set<String> tags = new HashSet<>();
 
     public int getId() {
@@ -125,6 +127,14 @@ public class Asset {
         this.audiobookS3ObjectKey = audiobookS3ObjectKey;
     }
 
+    public String getAmazonId() {
+        return amazonId;
+    }
+
+    public void setAmazonId(String amazonId) {
+        this.amazonId = amazonId;
+    }
+
     public void addTag(String tag) {
         tags.add(tag);
     }
@@ -151,6 +161,7 @@ public class Asset {
                     Utils.objectsAreEqual(this.altTitle1, other.altTitle1) &&
                     Utils.objectsAreEqual(this.ebookS3ObjectKey, other.ebookS3ObjectKey) &&
                     Utils.objectsAreEqual(this.audiobookS3ObjectKey, other.audiobookS3ObjectKey) &&
+                    Utils.objectsAreEqual(this.amazonId, other.amazonId) &&
                     Utils.objectsAreEqual(this.tags, other.tags); // note: set equals() ignores order https://docs.oracle.com/javase/6/docs/api/java/util/Set.html#equals(java.lang.Object)
         }
         else {

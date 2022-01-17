@@ -23,7 +23,7 @@
                     <div class="book-info-links">
                         <a href="https://www.amazon.com/s?k=${book.author?url}%20${book.title?url}"><img class="book-action-icon" src="/images/amazon.png"></a>&nbsp;
                         <a href="/book?id=${book.id?c}"><img class="book-action-icon" src="/images/download.png"></a>&nbsp;
-                        <#if book.audiobook_s3_object_id??>
+                        <#if book.audiobookS3ObjectKey??>
                             <a href="/audiobook?id=${book.id?c}"><img class="book-action-icon" src="/images/audiobook.png"></a>
                         </#if>
                     </div>

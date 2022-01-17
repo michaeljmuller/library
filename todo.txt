@@ -1,15 +1,24 @@
 TO DO:
+- test audiobook download
+- series not displaying in order
+- remove background image (super slow)
+- test improved metadata upload/sync functionality
 - add stats on main page
 - implement audiobook searches
-- set up ci/cd
 - implement asset upload
 - resize image assets (smaller for faster load)
-- series not displaying in order
-- add column for amazon ASIN
-- improve metadata upload/sync functionality
 - display multiple authors in book list
+- freeze header, scroll stuff below
+- larger fonts for mobile
+- handle mobi
+- search
+- sort authors by last name
+- find a better way of handling new DB entries (than appending them to the end of metadata ss)
 
 DONE:
+- add column for amazon ASIN
+- set up ci/cd
+- improve metadata upload/sync functionality
 - conditionally display audiobook icon
 - implement downloads
 - implement mobile layout (responsive layout)

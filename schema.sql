@@ -31,6 +31,7 @@ create table assets (
     alt_title2 varchar(255),
     ebook_s3_object_key varchar(255) unique,
     audiobook_s3_object_key varchar(255) unique,
+    asin varchar(64),
     primary key(id),
     index(ebook_s3_object_key),
     index(audiobook_s3_object_key),

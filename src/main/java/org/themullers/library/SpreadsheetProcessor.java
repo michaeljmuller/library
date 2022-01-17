@@ -1,28 +1,42 @@
 package org.themullers.library;
 
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbookFactory;
 import org.springframework.stereotype.Component;
 import org.themullers.library.db.LibraryDAO;
+import org.themullers.library.s3.LibraryOSAO;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Component
-public class Spreadsheet {
+public class SpreadsheetProcessor {
+
+    protected LibraryDAO dao;
+    protected LibraryOSAO osao;
+
+    public SpreadsheetProcessor(LibraryDAO dao, LibraryOSAO osao) {
+        this.dao = dao;
+        this.osao = osao;
+    }
 
     public static final String SHEET_NAME = "Media Assets";
+    public static final String SHEET_NEW_AUDIOBOOKS = "New Audiobooks";
 
     // this is m/d/yy according to https://poi.apache.org/apidocs/dev/org/apache/poi/ss/usermodel/BuiltinFormats.html
     public static final short EXCEL_BUILTIN_MDY_FORMAT = 0xe;
 
-    public static void toDatabase(LibraryDAO dao, byte[] spreadsheet) throws IOException {
+    public void upload(byte[] spreadsheet) throws IOException {
 
         // get all the assets from the database, indexed by asset id
         var dbAssetList = dao.fetchAllAssets();
@@ -35,8 +49,8 @@ public class Spreadsheet {
 
                 var row = new AssetRow((XSSFRow) poiRow);
 
-                // skip the header row
-                if (row.isHeader()) {
+                // skip the header row and blank rows
+                if (row.isHeader() || row.isBlank()) {
                     continue;
                 }
 
@@ -52,7 +66,7 @@ public class Spreadsheet {
                     // if the asset doesn't exist in the database then insert it
                     if (dbAsset == null) {
                         System.out.println(String.format("new asset, inserting: title %s", ssAsset.getEbookS3ObjectKey()));
-                        //dao.insertAsset(ssAsset);
+                        dao.insertAsset(ssAsset);
                     }
 
                     // the asset does exist; something needs to be updated
@@ -63,14 +77,14 @@ public class Spreadsheet {
                         var dbTags = dbAsset.getTags();
                         if (!Utils.objectsAreEqual(ssTags, dbTags)) {
                             System.out.println(String.format("assets tags differ, setting new tags: id %d, title %s", ssAsset.getId(), ssAsset.getEbookS3ObjectKey()));
-                            //dao.setTags(ssAsset.getId(), ssTags);
+                            dao.setTags(ssAsset.getId(), ssTags);
                             dbAsset.setTags(ssTags);
                         }
 
                         // now that we've updated the tags, do we need to update the asset itself?
                         if (!ssAsset.equals(dbAsset)) {
                             System.out.println(String.format("assets metadata differs, updating: id %d, title %s", ssAsset.getId(), ssAsset.getEbookS3ObjectKey()));
-                            //dao.updateAsset(ssAsset);
+                            dao.updateAsset(ssAsset);
                         }
                     }
                 }
@@ -98,6 +112,7 @@ public class Spreadsheet {
         asset.setAltTitle2(row.getStringValue(Column.ALT_TITLE2));
         asset.setEbookS3ObjectKey(row.getStringValue(Column.EBOOK_S3_OBJ_KEY));
         asset.setAudiobookS3ObjectKey(row.getStringValue(Column.AUDIOBOOK_S3_OBJ_KEY));
+        asset.setAmazonId(row.getStringValue(Column.ASIN));
 
         // split the comma-separated tags and add them to the asset's list individually
         String tagCSV = row.getStringValue(Column.TAGS);
@@ -111,12 +126,19 @@ public class Spreadsheet {
         return asset;
     }
 
-    public static byte[] fromDatabase(LibraryDAO dao) throws IOException {
+    public byte[] download() throws IOException {
+        var assets = dao.fetchAllAssets();
+        var objects = osao.listObjects();
+        var dbEbooks = new LinkedList<String>();
+        var dbAudiobooks = new LinkedList<String>();
+
         var wb = XSSFWorkbookFactory.createWorkbook();
         var sheet = wb.createSheet(SHEET_NAME);
+        var audioSheet = wb.createSheet(SHEET_NEW_AUDIOBOOKS);
 
         // make the text larger for my geriatric eyeballs
         sheet.setZoom(150);
+        audioSheet.setZoom(150);
 
         // create a header row
         var header = sheet.createRow(0);
@@ -136,30 +158,33 @@ public class Spreadsheet {
             cell.setCellStyle(style);
         }
 
-        // for each asset in the database
+        // write each asset that we found in the database
         int rowNum = 1;
-        for (var asset : dao.fetchAllAssets()) {
+        for (var asset : assets) {
+            writeAssetToSpreadsheet(asset, sheet, rowNum++);
+            addToList(asset.getEbookS3ObjectKey(), dbEbooks);
+            addToList(asset.getAudiobookS3ObjectKey(), dbAudiobooks);
+        }
 
-            var row = new AssetRow(sheet.createRow(rowNum));
-            row.setValue(Column.DBID, asset.getId());
-            row.setValue(Column.TITLE, asset.getTitle());
-            row.setValue(Column.AUTHOR, asset.getAuthor());
-            row.setValue(Column.AUTHOR2, asset.getAuthor2());
-            row.setValue(Column.AUTHOR3, asset.getAuthor3());
-            row.setValue(Column.PUB_YEAR, asset.getPublicationYear());
-            var series = asset.getSeries();
-            if (series != null && series.trim().length() > 0) {
-                row.setValue(Column.SERIES, asset.getSeries());
-                row.setValue(Column.SERIES_SEQUENCE, asset.getSeriesSequence());
+        // what assets exist in S3 that aren't in the database?
+        var newAudiobookNum = 0;
+        for (var obj : objects) {
+
+            // if there's an epub that's not in the database
+            if (obj.toLowerCase().endsWith(".epub") && !dbEbooks.contains(obj)) {
+                var asset = new Asset();
+                asset.setEbookS3ObjectKey(obj);
+                asset.setAcquisitionDate(new Date());
+                writeAssetToSpreadsheet(asset, sheet, rowNum++);
             }
-            row.setValue(Column.ACQ_DATE, asset.getAcquisitionDate());
-            row.setValue(Column.ALT_TITLE1, asset.getAltTitle1());
-            row.setValue(Column.ALT_TITLE2, asset.getAltTitle2());
-            row.setValue(Column.EBOOK_S3_OBJ_KEY, asset.getEbookS3ObjectKey());
-            row.setValue(Column.AUDIOBOOK_S3_OBJ_KEY, asset.getAudiobookS3ObjectKey());
-            // TODO: populate the tags
 
-            rowNum++;
+            // if there's an audiobook that's not in the database, write its name to another sheet
+            if (obj.toLowerCase().endsWith(".m4b") && !dbAudiobooks.contains(obj)) {
+                var row = audioSheet.createRow(newAudiobookNum++);
+                var cell = row.createCell(0);
+                cell.setCellType(CellType.STRING);
+                cell.setCellValue(obj);
+            }
         }
 
         // resize the columns to fit the content
@@ -171,6 +196,40 @@ public class Spreadsheet {
         sheet.createFreezePane(0,1);
 
         return bytesForWorkbook(wb);
+    }
+
+    protected void addToList(String item, List<String> list) {
+        if (item != null && !list.contains(item)) {
+            list.add(item);
+        }
+    }
+
+    protected void writeAssetToSpreadsheet(Asset asset, XSSFSheet sheet, int rowNum) {
+        var row = new AssetRow(sheet.createRow(rowNum));
+        row.setValue(Column.DBID, asset.getId());
+        row.setValue(Column.TITLE, asset.getTitle());
+        row.setValue(Column.AUTHOR, asset.getAuthor());
+        row.setValue(Column.AUTHOR2, asset.getAuthor2());
+        row.setValue(Column.AUTHOR3, asset.getAuthor3());
+        var pubYear = asset.getPublicationYear();
+        if (pubYear != null) {
+            row.setValue(Column.PUB_YEAR, pubYear);
+        }
+        var series = asset.getSeries();
+        if (series != null && series.trim().length() > 0) {
+            row.setValue(Column.SERIES, asset.getSeries());
+            row.setValue(Column.SERIES_SEQUENCE, asset.getSeriesSequence());
+        }
+        row.setValue(Column.ACQ_DATE, asset.getAcquisitionDate());
+        row.setValue(Column.ALT_TITLE1, asset.getAltTitle1());
+        row.setValue(Column.ALT_TITLE2, asset.getAltTitle2());
+        row.setValue(Column.EBOOK_S3_OBJ_KEY, asset.getEbookS3ObjectKey());
+        row.setValue(Column.AUDIOBOOK_S3_OBJ_KEY, asset.getAudiobookS3ObjectKey());
+        var tags = asset.getTags();
+        if (tags != null) {
+            row.setValue(Column.TAGS, String.join(", ", asset.getTags()));
+        }
+        row.setValue(Column.ASIN, asset.getAmazonId());
     }
 
     static byte[] bytesForWorkbook(XSSFWorkbook wb) throws IOException {
@@ -227,6 +286,23 @@ public class Spreadsheet {
         protected boolean isHeader() {
             return row.getRowNum() == 0;
         }
+
+        // from https://stackoverflow.com/a/28451783
+        protected boolean isBlank() {
+            if (row == null) {
+                return true;
+            }
+            if (row.getLastCellNum() <= 0) {
+                return true;
+            }
+            for (int cellNum = row.getFirstCellNum(); cellNum < row.getLastCellNum(); cellNum++) {
+                Cell cell = row.getCell(cellNum);
+                if (cell != null && cell.getCellType() != CellType.BLANK && !Utils.isBlank(cell.toString())) {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 
     public enum Column {
@@ -243,7 +319,8 @@ public class Spreadsheet {
         ALT_TITLE2(10, "Alt Title 2"),
         EBOOK_S3_OBJ_KEY(11, "Ebook Object Key"),
         AUDIOBOOK_S3_OBJ_KEY(12, "Audiobook Object Key"),
-        TAGS(13, "Tags");
+        TAGS(13, "Tags"),
+        ASIN(14, "ASIN");
 
         private int number;
         private String header;

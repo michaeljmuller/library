@@ -17,12 +17,16 @@ public class Utils {
         return maybeNull == null ?  notNull : maybeNull;
     }
 
-    protected static boolean objectsAreEqual(Object a, Object b) {
+    public static boolean objectsAreEqual(Object a, Object b) {
         boolean areEqual =  a == null ? b == null : a.equals(b);
         if (!areEqual) {
             System.out.println(String.format("objects differ; %s != %s", a, b));
         }
         return areEqual;
+    }
+
+    public static boolean isBlank(String str) {
+        return str != null && str.trim().length() > 0;
     }
 
 }

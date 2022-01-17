@@ -25,11 +25,13 @@ public class WebApplication {
 
     LibraryDAO dao;
     LibraryOSAO osao;
+    SpreadsheetProcessor spreadsheetProcessor;
 
     @Autowired
-    public WebApplication(LibraryDAO dao, LibraryOSAO osao) {
+    public WebApplication(LibraryDAO dao, LibraryOSAO osao, SpreadsheetProcessor spreadsheetProcessor) {
         this.dao = dao;
         this.osao = osao;
+        this.spreadsheetProcessor = spreadsheetProcessor;
     }
 
     /**
@@ -125,7 +127,7 @@ public class WebApplication {
      */
     @GetMapping(value = "/ss", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public byte[] downloadSpreadsheet() throws IOException {
-        return Spreadsheet.fromDatabase(dao);
+        return spreadsheetProcessor.download();
     }
 
     /**
@@ -156,7 +158,7 @@ public class WebApplication {
         else {
             try {
                 // import the contents from the file into the database
-                Spreadsheet.toDatabase(dao, bytes);
+                spreadsheetProcessor.upload(bytes);
             }
             catch (Exception x) {
                 success = false;
