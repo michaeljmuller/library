@@ -81,10 +81,9 @@ body {
 #title {
     font-weight: bold;
     font-size: 200%;
-    background-color: cyan;
     margin-bottom: 25px;
     padding: 10px;
-    background-color: sienna;
+    background-color: #4B91F7;
     /*
     background: url("/images/books.jpeg") 50% fixed;
      */

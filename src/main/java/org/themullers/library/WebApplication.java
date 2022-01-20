@@ -11,10 +11,14 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import org.themullers.library.db.LibraryDAO;
+import org.themullers.library.email.EmailSender;
+import org.themullers.library.email.EmailTemplate;
+import org.themullers.library.email.EmailTemplateProcessor;
 import org.themullers.library.s3.LibraryOSAO;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.HashMap;
 
 /**
  * This class handles HTTP requests from the user's web browser.
@@ -26,12 +30,16 @@ public class WebApplication {
     LibraryDAO dao;
     LibraryOSAO osao;
     SpreadsheetProcessor spreadsheetProcessor;
+    EmailSender emailSender;
+    EmailTemplateProcessor emailTemplateProcessor;
 
     @Autowired
-    public WebApplication(LibraryDAO dao, LibraryOSAO osao, SpreadsheetProcessor spreadsheetProcessor) {
+    public WebApplication(LibraryDAO dao, LibraryOSAO osao, SpreadsheetProcessor spreadsheetProcessor, EmailSender emailSender, EmailTemplateProcessor emailTemplateProcessor) {
         this.dao = dao;
         this.osao = osao;
         this.spreadsheetProcessor = spreadsheetProcessor;
+        this.emailSender = emailSender;
+        this.emailTemplateProcessor = emailTemplateProcessor;
     }
 
     /**
@@ -204,6 +212,21 @@ public class WebApplication {
         var id = dao.fetchAudiobookObjectKey(assetId);
         var obj = osao.readObject(id);
         writeS3ObjectToResponse(obj, response);
+    }
+
+    @GetMapping("/email")
+    public String template() throws Exception {
+
+        var model = new HashMap<String, Object>();
+        model.put("user", "mike");
+        model.put("foo", "bar");
+
+        var email = emailTemplateProcessor.process(EmailTemplate.RESET_PASSWORD, model);
+        email.setTo("mmuller@ziaconsulting.com");
+
+        emailSender.sendEmail(email);
+
+        return "done";
     }
 
     /**

@@ -1,6 +1,6 @@
 TO DO:
 - test audiobook download
-- series not displaying in order
+- series not displaying in order (only for lois mm bujold?)
 - remove background image (super slow)
 - test improved metadata upload/sync functionality
 - add stats on main page
