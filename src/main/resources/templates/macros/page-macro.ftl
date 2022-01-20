@@ -3,16 +3,15 @@
 <#setting url_escaping_charset="UTF-8">
 <html lang="en">
     <head>
+        <#-- This meta tag is hugely important for making 1px on mobile look like 1px on desktop -->
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <meta charset="UTF-8">
         <title>${title?html}</title>
         <link rel="stylesheet" href="/styles/style.css">
 
-        <!-- these are for the top nav, which was lifted from https://codepen.io/andornagy/pen/xhiJH -->
+        <#-- these are for the top nav, which was lifted from https://codepen.io/andornagy/pen/xhiJH -->
         <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
         <link rel="stylesheet" href="/styles/topnav.css">
-
-        <!-- try to make the page look ok on cell phones -->
-        <link rel="stylesheet" href="/styles/mobile-overrides.css" media="(max-width: 1000px)">
     </head>
     <body>
 
@@ -24,7 +23,7 @@
                     <li><a href="/">Home</a></li>
                     <li><a href="/authors">Authors</a></li>
                     <li><a href="/tags">Tags</a></li>
-                    <li><a href="#">Administration</a>
+                    <li><a href="#">Admin</a>
                         <ul>
                             <li><a href="/metadata">Metadata</a></li>
                             <li><a href="#">Users</a></li>

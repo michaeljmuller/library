@@ -1,5 +1,5 @@
-<#import "page-template.ftl" as c/>
-<#import "book-grid-template.ftl" as b/>
+<#import "macros/page-macro.ftl" as c/>
+<#import "macros/book-grid-macro.ftl" as b/>
 
 <@c.page title="Mike's eBook and Audiobook Library">
 

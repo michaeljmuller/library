@@ -1,4 +1,4 @@
-<#import "page-template.ftl" as c/>
+<#import "macros/page-macro.ftl" as c/>
 <@c.page title="Metadata">
 
     <div class="message"><span class="status-${status!}">${msg!}</span></div>

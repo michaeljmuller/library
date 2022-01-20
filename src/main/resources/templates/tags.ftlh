@@ -1,4 +1,4 @@
-<#import "page-template.ftl" as c/>
+<#import "macros/page-macro.ftl" as c/>
 
 <@c.page title="Tags">
     <table>

@@ -1,0 +1,66 @@
+#dialog {
+    width: 25em;
+
+    /* position 30% down page, centered horizontally */
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -30%);
+}
+
+#form .title {
+    color: #444;
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 10px 0 30px 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 20px;
+}
+
+#form .msg {
+    padding-bottom: 20px;
+}
+
+#form {
+
+    /* give the login dialog a box shadow */
+    border-radius: 2px 2px 5px 5px;
+    box-shadow: 0px 1px 5px rgba(0, 0, 0, 0.3);
+
+    /* stack the form items vertically */
+    display: flex;
+    flex-direction: column;
+
+    padding: 3em;
+}
+
+#form input {
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1em;
+}
+
+#form a {
+    font-size: 0.8em;
+    color: #2196F3;
+    text-decoration: none;
+}
+
+#form button {
+    margin-top: 2em;
+
+    box-shadow: none;
+    border-width: 0;
+
+    /* button text is bold white */
+    font-size: 1em;
+    font-weight: bold;
+    color: white;
+    padding: 10px;
+
+    /* button is blue with curved corners */
+    background-color: #2196F3;
+    border-radius: 5px;
+}

@@ -9,12 +9,6 @@ body {
     margin-right: 20px;
 }
 
-.author-table td {
-    padding-left: 10px;
-    padding-right: 10px;
-    vertical-align: top;
-}
-
 .message {
     font-weight: bold;
 }
@@ -107,20 +101,20 @@ book-grid-container (contains all the books)
 }
 
 .book-grid-item {
-    width: 28em;
-    font-size: 12px;
+    width: 20em;
     display: flex;
 }
 
 .book-grid-item .book-info {
     position: relative; /* so we can put the action icons at the bottom */
     padding-left: 1em; /* so there's space between the cover image and the text */
-    flex: 1;
+    flex: 60;
     height: 100%;
+    font-size: 80%;
 }
 
 .cover-image-container {
-    flex: 1;
+    flex: 40;
 }
 
 .cover-image-container img {
