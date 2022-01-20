@@ -19,6 +19,7 @@ import org.themullers.library.s3.LibraryOSAO;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.regex.Pattern;
 
 /**
  * This class handles HTTP requests from the user's web browser.
@@ -198,6 +199,43 @@ public class WebApplication {
             mv.addObject("msg", "Invalid login; please try again.");
         }
         return mv;
+    }
+
+    @GetMapping("/pw-reset")
+    public ModelAndView displayPasswordResetForm() {
+        // secret sauce: return new ModelAndView("redirect:/redirectedUrl", model);
+        return new ModelAndView("password-reset");
+    }
+
+    @PostMapping("/pw-reset")
+    public ModelAndView processPasswordResetForm(@RequestParam("email") String email) {
+
+        // check to make sure the user provided something that looks like a valid email
+        if (!isValidFormatEmail(email)) {
+            var mv = new LibraryModelAndView("/password-reset");
+            mv.addObject("msg", "Please enter a valid format email");
+            return mv;
+        }
+
+        sendPasswordResetEmail();
+        return new ModelAndView("redirect:/pw-reset-email-sent");
+    }
+
+    @GetMapping("/pw-reset-email-sent")
+    public ModelAndView checkEmailNotification() {
+        return new ModelAndView("/check-email");
+    }
+
+    protected boolean isValidFormatEmail(String email) {
+        // from https://www.baeldung.com/java-email-validation-regex
+        var emailRegex = "^(?=.{1,64}@)[A-Za-z0-9\\+_-]+(\\.[A-Za-z0-9\\+_-]+)*@"
+                + "[^-][A-Za-z0-9\\+-]+(\\.[A-Za-z0-9\\+-]+)*(\\.[A-Za-z]{2,})$";
+        var pattern = Pattern.compile(emailRegex);
+        return pattern.matcher(email).matches();
+    }
+
+    protected void sendPasswordResetEmail() {
+        // todo
     }
 
     @GetMapping(value = "/book", produces = "application/epub+zip")

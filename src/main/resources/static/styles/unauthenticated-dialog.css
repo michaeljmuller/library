@@ -64,3 +64,7 @@
     background-color: #2196F3;
     border-radius: 5px;
 }
+
+#form .instructions {
+    padding-bottom: 1em;
+}

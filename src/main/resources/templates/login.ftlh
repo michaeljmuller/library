@@ -6,10 +6,10 @@
         <#if msg??>
             <div class="msg">${msg}</div>
         </#if>
-        <input type="text" placeholder="Username" name="username" id="username" autofocus/>
+        <input type="text" placeholder="Email Address" name="username" id="username" autofocus/>
         <input type="password" placeholder="Password" name="password" id="password"/>
         <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-        <a href="#">Forgot your password?</a>
+        <a href="/pw-reset">Forgot your password?</a>
         <button onclick="document.getElementById('loginForm').submit()">
             <span class="state">Log in</span>
         </button>

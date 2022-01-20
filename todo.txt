@@ -6,13 +6,13 @@ TO DO:
 - resize image assets (smaller for faster load)
 - display multiple authors on book card
 - freeze header, scroll stuff below
-- larger fonts for mobile
 - handle mobi
 - search
 - sort authors by last name
 - find a better way of handling new DB entries (than appending them to the end of metadata ss)
 
 DONE:
+- larger fonts for mobile
 - remove background image (super slow)
 - test improved metadata upload/sync functionality
 - test audiobook download
