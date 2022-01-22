@@ -2,7 +2,7 @@ package org.themullers.library.email;
 
 public class EmailTemplate {
 
-    public static final EmailTemplate RESET_PASSWORD = new EmailTemplate("Password reset for Mike's eBook and Audiobook Library", "forgot-password-email.ftl", "text/html");
+    public static final EmailTemplate RESET_PASSWORD = new EmailTemplate("Password Reset for Mike's eBook Library", "email/forgot-password-email.ftl", "text/html");
 
     protected String subjectTemplate;
     protected String bodyTemplatePath;

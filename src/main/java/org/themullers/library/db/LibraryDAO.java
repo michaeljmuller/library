@@ -8,6 +8,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.themullers.library.Asset;
+import org.themullers.library.PasswordResetToken;
 import org.themullers.library.User;
 
 import java.sql.Blob;
@@ -82,11 +83,22 @@ public class LibraryDAO {
 
     /**
      * Returns information about the user with a given email address.
+     * @param userId  The ID of the user to find.
+     * @return  Information about the specified user.
+     */
+    public User fetchUser(int userId) {
+        String sql = String.format("select %s from users where id = ?", commaSeparated(USER_COLS.class));
+        var users = jt.query(sql, LibraryDAO::mapUser, userId);
+        return users == null || users.size() == 0 ? null : users.get(0);
+    }
+
+    /**
+     * Returns information about the user with a given email address.
      * @param email  The email address associated with the user to find.
      * @return  Information about the specified user.
      */
     public User fetchUser(String email) {
-        String sql = String.format("select %s from users where email = ? limit 1", commaSeparated(USER_COLS.class), email);
+        String sql = String.format("select %s from users where email = ? limit 1", commaSeparated(USER_COLS.class));
         var users = jt.query(sql, LibraryDAO::mapUser, email);
         return users == null || users.size() == 0 ? null : users.get(0);
     }
@@ -238,6 +250,17 @@ public class LibraryDAO {
         return map;
     }
 
+    public PasswordResetToken fetchPasswordResetTokenForUser(int userId) {
+        var tokens = jt.query("select token, creation_time from password_reset_tokens where user_id = ? order by creation_time desc limit 1", (rs, rowNum) -> {
+            var token = new PasswordResetToken();
+            token.setUserId(userId);
+            token.setToken(rs.getString("token"));
+            token.setCreationTime(rs.getTimestamp("creation_time"));
+            return token;
+        }, userId);
+        return tokens == null || tokens.size() <= 0 ? null : tokens.get(0);
+    }
+
     // WRITE ACCESS METHODS
 
     /**
@@ -315,6 +338,23 @@ public class LibraryDAO {
                 asset.getPublicationYear(), asset.getSeries(), asset.getSeriesSequence(), asset.getAcquisitionDate(),
                 asset.getAltTitle1(), asset.getAltTitle2(), asset.getEbookS3ObjectKey(), asset.getAudiobookS3ObjectKey(),
                 asset.getAmazonId(), asset.getId());
+    }
+
+    @Transactional
+    public void storePasswordResetToken(int userId, String token) {
+        jt.update("delete from password_reset_tokens where user_id = ?", userId);
+        jt.update("insert into password_reset_tokens (user_id, token, creation_time) values (?, ?, ?)", userId, token, new Date());
+    }
+
+    /**
+     * This is a sentence that should could be a grammatical error.
+     *
+     * @param userId
+     * @param password
+     */
+    @Transactional
+    public void setPassword(int userId, String password) {
+        jt.update("update users set password = ? where id = ?", password, userId);
     }
 
     // HELPER METHODS BELOW HERE

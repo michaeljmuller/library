@@ -49,7 +49,17 @@ create table tags (
     id int not null auto_increment,
     asset_id into not null,
     tag varchar(255),
-    FOREIGN KEY(asset_id) REFERENCES assets(id)
+    FOREIGN KEY(asset_id) REFERENCES assets(id),
+    primary key(id)
 ) CHARACTER SET utf8, engine = innodb ;
+
+create table password_reset_tokens (
+    id int not null auto_increment,
+    user_id int not null,
+    token varchar(64) not null,
+    creation_time datetime not null,
+    foreign key(user_id) references users(id),
+    primary key(id)
+) CHARACTER SET utf8, engine = innodb;
 
 

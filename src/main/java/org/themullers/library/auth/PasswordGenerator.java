@@ -1,5 +1,7 @@
 package org.themullers.library.auth;
 
+import org.springframework.stereotype.Component;
+
 import java.util.Random;
 
 /**
@@ -7,6 +9,7 @@ import java.util.Random;
  * I've prevented selection of some characters that are often confused, like 0/O/o and 1/l.
  * Adapted from https://stackoverflow.com/a/41891760
  */
+@Component
 public class PasswordGenerator {
 
     protected static final String LOWER = "abcdefghjkmnpqrstxyz";

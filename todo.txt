@@ -10,6 +10,7 @@ TO DO:
 - search
 - sort authors by last name
 - find a better way of handling new DB entries (than appending them to the end of metadata ss)
+- some unauthenticated dialogs have no header-window-bar-title
 
 DONE:
 - larger fonts for mobile

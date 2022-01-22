@@ -1,23 +1,30 @@
 package org.themullers.library;
 
 import com.amazonaws.services.s3.model.S3Object;
+import freemarker.template.TemplateException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
+import org.themullers.library.auth.PasswordGenerator;
 import org.themullers.library.db.LibraryDAO;
 import org.themullers.library.email.EmailSender;
 import org.themullers.library.email.EmailTemplate;
 import org.themullers.library.email.EmailTemplateProcessor;
 import org.themullers.library.s3.LibraryOSAO;
 
+import javax.mail.MessagingException;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.regex.Pattern;
 
@@ -26,6 +33,7 @@ import java.util.regex.Pattern;
  */
 @RestController
 @SpringBootApplication
+@Configuration
 public class WebApplication {
 
     LibraryDAO dao;
@@ -33,20 +41,28 @@ public class WebApplication {
     SpreadsheetProcessor spreadsheetProcessor;
     EmailSender emailSender;
     EmailTemplateProcessor emailTemplateProcessor;
+    PasswordGenerator pwGenerator;
+    String applicationBaseURL;
+
+    protected final static int TOKEN_LIFESPAN_MINUTES = 15;
+
 
     @Autowired
-    public WebApplication(LibraryDAO dao, LibraryOSAO osao, SpreadsheetProcessor spreadsheetProcessor, EmailSender emailSender, EmailTemplateProcessor emailTemplateProcessor) {
+    public WebApplication(LibraryDAO dao, LibraryOSAO osao, SpreadsheetProcessor spreadsheetProcessor, EmailSender emailSender, EmailTemplateProcessor emailTemplateProcessor, PasswordGenerator pwGenerator, @Value("${application.base.url}") String applicationBaseURL) {
         this.dao = dao;
         this.osao = osao;
         this.spreadsheetProcessor = spreadsheetProcessor;
         this.emailSender = emailSender;
         this.emailTemplateProcessor = emailTemplateProcessor;
+        this.pwGenerator = pwGenerator;
+        this.applicationBaseURL = applicationBaseURL;
     }
 
     /**
      * This is the main entry point for the application.  Any arguments are passed
      * through to Spring Boot.
-     * @param args  parameters provided on the command line when this application was launched
+     *
+     * @param args parameters provided on the command line when this application was launched
      */
     public static void main(String args[]) {
         SpringApplication.run(WebApplication.class, args);
@@ -55,16 +71,17 @@ public class WebApplication {
     /**
      * Handle a request to render the application's home page.
      * The home page displays the most recently added assets.
+     *
+     * @return information needed to render the home page
      * @page can be a number > 1 to display more (older) assets
-     * @return  information needed to render the home page
      */
     @GetMapping("/")
-    public ModelAndView home(@RequestParam(name="page", required=false, defaultValue="1") int page) {
+    public ModelAndView home(@RequestParam(name = "page", required = false, defaultValue = "1") int page) {
         var mv = new LibraryModelAndView("home");
 
         // get the most recent assets
         int assetsPerPage = 6;
-        var newReleases = dao.fetchNewestAssets(assetsPerPage, page*assetsPerPage);
+        var newReleases = dao.fetchNewestAssets(assetsPerPage, page * assetsPerPage);
         mv.addObject("page", page);
         mv.addObject("assets", newReleases);
         return mv;
@@ -72,6 +89,7 @@ public class WebApplication {
 
     /**
      * Handle a request to render the "authors" page.
+     *
      * @return information needed to render the page
      */
     @GetMapping("/authors")
@@ -83,11 +101,12 @@ public class WebApplication {
 
     /**
      * Handle a request to render the "author" page.
+     *
      * @param author the author whose assets are to be rendered
      * @return information needed to render the page
      */
     @GetMapping("/author")
-    public ModelAndView author(@RequestParam(name="name") String author) {
+    public ModelAndView author(@RequestParam(name = "name") String author) {
 
         // get the assets, group them by series, and then pull out the stand-alone assets to be handled uniquely
         var assets = dao.fetchAssetsForAuthor(author);
@@ -104,24 +123,26 @@ public class WebApplication {
 
     /**
      * Handle a request to provide a cover image for an asset.
+     *
      * @param book the s3 object id of the book whose cover should be rendered
-     * @return  information needed to render the page
+     * @return information needed to render the page
      */
     @GetMapping(value = "/cover", produces = "image/jpeg")
-    public byte[] cover(@RequestParam(name="book") String book) throws IOException {
+    public byte[] cover(@RequestParam(name = "book") String book) throws IOException {
         return dao.fetchImageForEbook(book);
     }
 
     /**
      * Handle a request to render the page that allows the user to upload or download a spreadsheet
      * containing metadata for all the assets in the library.
-     * @param msg  an optional message to be displayed indicating results from an earlier operation
-     * @param status  an optional indicator of the success of an earlier operation; should be "success" or "failure"
-     * @param stackDump  an optional stack trace with diagnostic information concerning the failure of an earlier operation
-     * @return  information needed to render the page
+     *
+     * @param msg       an optional message to be displayed indicating results from an earlier operation
+     * @param status    an optional indicator of the success of an earlier operation; should be "success" or "failure"
+     * @param stackDump an optional stack trace with diagnostic information concerning the failure of an earlier operation
+     * @return information needed to render the page
      */
     @GetMapping("metadata")
-    public ModelAndView metadata(@RequestParam(name="msg", required=false) String msg, @RequestParam(name="status", required=false) String status,  @ModelAttribute(name="stackDump") String stackDump) {
+    public ModelAndView metadata(@RequestParam(name = "msg", required = false) String msg, @RequestParam(name = "status", required = false) String status, @ModelAttribute(name = "stackDump") String stackDump) {
         var mv = new LibraryModelAndView("metadata");
         mv.addObject("msg", msg);
         mv.addObject("status", status);
@@ -131,8 +152,9 @@ public class WebApplication {
 
     /**
      * Handle a request to download a spreadsheet containing metadata for each asset in the library.
-     * @return  a spreadsheet
-     * @throws IOException  thrown if an unexpected error occurs generating the spreadsheet
+     *
+     * @return a spreadsheet
+     * @throws IOException thrown if an unexpected error occurs generating the spreadsheet
      */
     @GetMapping(value = "/ss", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public byte[] downloadSpreadsheet() throws IOException {
@@ -141,10 +163,11 @@ public class WebApplication {
 
     /**
      * Handle a request to upload a spreadsheet containing metadata for each asset in the library.
-     * @param file  the spreadsheet to upload
-     * @param redirectAttributes  a Spring Boot object that allows this method to store information to be rendered in another web page
-     * @return  a view object that instructs Spring Boot to redirect the user to the "metadata" page
-     * @throws IOException  thrown if an unexpected error occurs processing the spreadsheet
+     *
+     * @param file               the spreadsheet to upload
+     * @param redirectAttributes a Spring Boot object that allows this method to store information to be rendered in another web page
+     * @return a view object that instructs Spring Boot to redirect the user to the "metadata" page
+     * @throws IOException thrown if an unexpected error occurs processing the spreadsheet
      */
     @PostMapping("/ss")
     public RedirectView uploadSpreadsheet(@RequestParam("file") MultipartFile file, RedirectAttributes redirectAttributes) throws IOException {
@@ -168,8 +191,7 @@ public class WebApplication {
             try {
                 // import the contents from the file into the database
                 spreadsheetProcessor.upload(bytes);
-            }
-            catch (Exception x) {
+            } catch (Exception x) {
                 success = false;
                 msg = String.format("Unable to process spreadsheet -- %s: %s", x.getClass().getSimpleName(), x.getMessage());
                 redirectAttributes.addFlashAttribute("stackDump", Utils.toString(x));
@@ -190,7 +212,7 @@ public class WebApplication {
     }
 
     @GetMapping("/login")
-    public ModelAndView login(@RequestParam(value="error", required=false) String error, @RequestParam(value="logout", required=false) String logout) {
+    public ModelAndView login(@RequestParam(value = "error", required = false) String error, @RequestParam(value = "logout", required = false) String logout) {
         var mv = new LibraryModelAndView("/login");
         if (logout != null) {
             mv.addObject("msg", "You have been logged out.");
@@ -202,13 +224,14 @@ public class WebApplication {
     }
 
     @GetMapping("/pw-reset")
-    public ModelAndView displayPasswordResetForm() {
-        // secret sauce: return new ModelAndView("redirect:/redirectedUrl", model);
-        return new ModelAndView("password-reset");
+    public ModelAndView displayPasswordResetForm(@RequestParam(value="msg", required=false) String msg) {
+        var mv = new ModelAndView("password-reset");
+        mv.addObject("msg", msg);
+        return mv;
     }
 
     @PostMapping("/pw-reset")
-    public ModelAndView processPasswordResetForm(@RequestParam("email") String email) {
+    public ModelAndView processPasswordResetForm(@RequestParam("email") String email) throws TemplateException, MessagingException, IOException {
 
         // check to make sure the user provided something that looks like a valid email
         if (!isValidFormatEmail(email)) {
@@ -217,13 +240,47 @@ public class WebApplication {
             return mv;
         }
 
-        sendPasswordResetEmail();
+        sendPasswordResetEmail(email);
         return new ModelAndView("redirect:/pw-reset-email-sent");
     }
 
     @GetMapping("/pw-reset-email-sent")
     public ModelAndView checkEmailNotification() {
         return new ModelAndView("/check-email");
+    }
+
+    @GetMapping("/pw-reset-process-token")
+    public ModelAndView processPasswordResetToken(@RequestParam("userid") int userId, @RequestParam("token") String token) {
+        var tokenInfo = dao.fetchPasswordResetTokenForUser(userId);
+        var user = dao.fetchUser(userId);
+
+        // check for bad data
+        if (tokenInfo == null || user == null || user.getId() != userId || !token.equals(tokenInfo.getToken())) {
+            var mv = new LibraryModelAndView("redirect:/pw-reset");
+            mv.addObject("msg", "Your password reset failed (bad data).  Try again?");
+            return mv;
+        }
+
+        // check for expired token
+        var tokenTimeMillis = tokenInfo.getCreationTime().getTime();
+        var tokenAgeMillis = System.currentTimeMillis() - tokenTimeMillis;
+        var tokenLifespanMillis = TOKEN_LIFESPAN_MINUTES * 60000;
+        if (tokenAgeMillis > tokenLifespanMillis) {
+            var mv = new LibraryModelAndView("redirect:/pw-reset");
+            mv.addObject("msg", "Your password reset failed (bad data).  Try again?");
+            return mv;
+        }
+
+        // reset the user's password
+        var password = pwGenerator.generate(10, true, false, true, false);
+        var encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
+        var encryptedPw = encoder.encode(password);
+        dao.setPassword(userId, encryptedPw);
+
+        // display the confirmation page
+        var mv = new LibraryModelAndView("/password-reset-complete");
+        mv.addObject("password", password);
+        return mv;
     }
 
     protected boolean isValidFormatEmail(String email) {
@@ -234,44 +291,61 @@ public class WebApplication {
         return pattern.matcher(email).matches();
     }
 
-    protected void sendPasswordResetEmail() {
-        // todo
+    protected void sendPasswordResetEmail(String emailAddress) throws IOException, TemplateException, MessagingException {
+
+        // fetch the user account associated with this email
+        var user = dao.fetchUser(emailAddress);
+        if (user == null) {
+
+            // if there is no user account associated with this email, just quietly do nothing
+            return;
+        }
+
+        // generate a simple 6-character token
+        var token = pwGenerator.generate(6, false, true, true, false);
+
+        // save this password reset token
+        dao.storePasswordResetToken(user.getId(), token);
+
+        // calculate token issue time and expiration times
+        var issueDate = new Date();
+        var expirationDate = new Date(issueDate.getTime() + (TOKEN_LIFESPAN_MINUTES * 60000));
+
+        // collect information needed to render the "reset password" email
+        var model = new HashMap<String, Object>();
+        model.put("user", user);
+        model.put("token", token);
+        model.put("tokenIssueDateTime", issueDate);
+        model.put("tokenExpirationDateTime", expirationDate);
+        model.put("tokenLifespan", TOKEN_LIFESPAN_MINUTES);
+        model.put("applicationBaseURL", applicationBaseURL);
+
+        // render and send the "reset password" email
+        var email = emailTemplateProcessor.process(EmailTemplate.RESET_PASSWORD, model);
+        email.setTo(emailAddress);
+        emailSender.sendEmail(email);
     }
 
     @GetMapping(value = "/book", produces = "application/epub+zip")
-    public void getEbook(@RequestParam(value="id") int assetId, HttpServletResponse response) throws IOException {
+    public void getEbook(@RequestParam(value = "id") int assetId, HttpServletResponse response) throws IOException {
         var id = dao.fetchEbookObjectKey(assetId);
         var obj = osao.readObject(id);
         writeS3ObjectToResponse(obj, response);
     }
 
     @GetMapping(value = "/audiobook", produces = "application/epub+zip")
-    public void getAudiobook(@RequestParam(value="id") int assetId, HttpServletResponse response) throws IOException {
+    public void getAudiobook(@RequestParam(value = "id") int assetId, HttpServletResponse response) throws IOException {
         var id = dao.fetchAudiobookObjectKey(assetId);
         var obj = osao.readObject(id);
         writeS3ObjectToResponse(obj, response);
     }
 
-    @GetMapping("/email")
-    public String template() throws Exception {
-
-        var model = new HashMap<String, Object>();
-        model.put("user", "mike");
-        model.put("foo", "bar");
-
-        var email = emailTemplateProcessor.process(EmailTemplate.RESET_PASSWORD, model);
-        email.setTo("mmuller@ziaconsulting.com");
-
-        emailSender.sendEmail(email);
-
-        return "done";
-    }
-
     /**
      * Writes an S3 object to an HTTP response object
-     * @param obj  the S3 object to write
-     * @param response  the HTTP response object to write to
-     * @throws IOException  thrown if an unexpected error occurs writing to the response
+     *
+     * @param obj      the S3 object to write
+     * @param response the HTTP response object to write to
+     * @throws IOException thrown if an unexpected error occurs writing to the response
      */
     protected void writeS3ObjectToResponse(S3Object obj, HttpServletResponse response) throws IOException {
 
@@ -298,14 +372,14 @@ public class WebApplication {
 
     /**
      * determine a file's mime type based on its extension
-     * @param filename  a filename
-     * @return  the mime type
+     *
+     * @param filename a filename
+     * @return the mime type
      */
     public String mimeTypeForFile(String filename) {
         if (filename.toLowerCase().endsWith(".epub")) {
             return "application/epub+zip";
-        }
-        else if (filename.toLowerCase().endsWith(".m4b")) {
+        } else if (filename.toLowerCase().endsWith(".m4b")) {
             return "audio/mp4a-latm";
         }
 
