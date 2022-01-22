@@ -55,4 +55,19 @@ public class LibUtils {
         return assets.stream().collect(Collectors.toMap(Asset::getId, Function.identity()));
     }
 
+    /**
+     * determine a file's mime type based on its extension
+     *
+     * @param filename a filename
+     * @return the mime type
+     */
+    public static String mimeTypeForFile(String filename) {
+        if (filename.toLowerCase().endsWith(".epub")) {
+            return "application/epub+zip";
+        } else if (filename.toLowerCase().endsWith(".m4b")) {
+            return "audio/mp4a-latm";
+        }
+
+        throw new RuntimeException("can't determine mime type for file " + filename);
+    }
 }

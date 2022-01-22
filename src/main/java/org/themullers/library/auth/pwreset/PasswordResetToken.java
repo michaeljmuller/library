@@ -1,4 +1,4 @@
-package org.themullers.library;
+package org.themullers.library.auth.pwreset;
 
 import java.util.Date;
 

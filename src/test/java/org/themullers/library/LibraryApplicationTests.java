@@ -4,8 +4,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.themullers.library.db.LibraryDAO;
+import org.themullers.library.web.LibraryApplication;
 
-@SpringBootTest(classes = WebApplication.class)
+@SpringBootTest(classes = LibraryApplication.class)
 class LibraryApplicationTests {
 
     @Autowired

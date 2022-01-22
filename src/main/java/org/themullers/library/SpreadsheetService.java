@@ -6,7 +6,7 @@ import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbookFactory;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.themullers.library.db.LibraryDAO;
 import org.themullers.library.s3.LibraryOSAO;
 
@@ -19,13 +19,13 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@Component
-public class SpreadsheetProcessor {
+@Service
+public class SpreadsheetService {
 
     protected LibraryDAO dao;
     protected LibraryOSAO osao;
 
-    public SpreadsheetProcessor(LibraryDAO dao, LibraryOSAO osao) {
+    public SpreadsheetService(LibraryDAO dao, LibraryOSAO osao) {
         this.dao = dao;
         this.osao = osao;
     }

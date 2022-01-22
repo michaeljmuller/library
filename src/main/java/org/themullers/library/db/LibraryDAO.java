@@ -8,7 +8,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.themullers.library.Asset;
-import org.themullers.library.PasswordResetToken;
+import org.themullers.library.auth.pwreset.PasswordResetToken;
 import org.themullers.library.User;
 
 import java.sql.Blob;
@@ -268,7 +268,6 @@ public class LibraryDAO {
      * @return  the id (primary key) of the new asset row
      * @param asset  the asset to insert
      */
-    @Transactional
     public int insertAsset(Asset asset) {
         var keyHolder = new GeneratedKeyHolder();
         String sql = String.format("insert into assets (%s) values (%s)", commaSeparated(ASSET_COLS.class), questionMarks(ASSET_COLS.class));
@@ -313,7 +312,6 @@ public class LibraryDAO {
      * @param mimeType  the mime type of the cover image
      * @param bytes  the cover image
      */
-    @Transactional
     public void insertCoverImage(String s3key, String filename, String mimeType, byte[] bytes) {
         jt.update("insert into cover_images (ebook_s3_object_key, filename, mime_type, bits) values (?, ?, ? , ?)", s3key, filename, mimeType, bytes);
     }
@@ -323,7 +321,6 @@ public class LibraryDAO {
      * @param assetId  the asset whose tags are to be defined
      * @param tags  the tags to associate with the asset
      */
-    @Transactional
     public void setTags(int assetId, Collection<String> tags) {
         jt.update("delete from tags where asset_id = ?", assetId);
         for (var tag : tags) {
@@ -331,7 +328,6 @@ public class LibraryDAO {
         }
     }
 
-    @Transactional
     public void updateAsset(Asset asset) {
         var sql = String.format("update assets set %s where id = ?", updateSql(ASSET_COLS.class));
         jt.update(sql, asset.getId(), asset.getTitle(), asset.getAuthor(), asset.getAuthor2(), asset.getAuthor3(),
@@ -340,10 +336,13 @@ public class LibraryDAO {
                 asset.getAmazonId(), asset.getId());
     }
 
-    @Transactional
     public void storePasswordResetToken(int userId, String token) {
         jt.update("delete from password_reset_tokens where user_id = ?", userId);
         jt.update("insert into password_reset_tokens (user_id, token, creation_time) values (?, ?, ?)", userId, token, new Date());
+    }
+
+    public void deletePasswordResetToken(int userId) {
+        jt.update("delete from password_reset_tokens where user_id = ?", userId);
     }
 
     /**

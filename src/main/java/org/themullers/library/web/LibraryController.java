@@ -1,79 +1,41 @@
-package org.themullers.library;
+package org.themullers.library.web;
 
 import com.amazonaws.services.s3.model.S3Object;
-import freemarker.template.TemplateException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
-import org.themullers.library.auth.PasswordGenerator;
+import org.themullers.library.LibUtils;
+import org.themullers.library.SpreadsheetService;
+import org.themullers.library.Utils;
 import org.themullers.library.db.LibraryDAO;
-import org.themullers.library.email.EmailSender;
-import org.themullers.library.email.EmailTemplate;
-import org.themullers.library.email.EmailTemplateProcessor;
 import org.themullers.library.s3.LibraryOSAO;
 
-import javax.mail.MessagingException;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.regex.Pattern;
 
-/**
- * This class handles HTTP requests from the user's web browser.
- */
 @RestController
-@SpringBootApplication
-@Configuration
-public class WebApplication {
+public class LibraryController {
 
     LibraryDAO dao;
     LibraryOSAO osao;
-    SpreadsheetProcessor spreadsheetProcessor;
-    EmailSender emailSender;
-    EmailTemplateProcessor emailTemplateProcessor;
-    PasswordGenerator pwGenerator;
-    String applicationBaseURL;
-
-    protected final static int TOKEN_LIFESPAN_MINUTES = 15;
-
+    SpreadsheetService ss;
 
     @Autowired
-    public WebApplication(LibraryDAO dao, LibraryOSAO osao, SpreadsheetProcessor spreadsheetProcessor, EmailSender emailSender, EmailTemplateProcessor emailTemplateProcessor, PasswordGenerator pwGenerator, @Value("${application.base.url}") String applicationBaseURL) {
+    public LibraryController(LibraryDAO dao, LibraryOSAO osao, SpreadsheetService ss) {
         this.dao = dao;
         this.osao = osao;
-        this.spreadsheetProcessor = spreadsheetProcessor;
-        this.emailSender = emailSender;
-        this.emailTemplateProcessor = emailTemplateProcessor;
-        this.pwGenerator = pwGenerator;
-        this.applicationBaseURL = applicationBaseURL;
-    }
-
-    /**
-     * This is the main entry point for the application.  Any arguments are passed
-     * through to Spring Boot.
-     *
-     * @param args parameters provided on the command line when this application was launched
-     */
-    public static void main(String args[]) {
-        SpringApplication.run(WebApplication.class, args);
+        this.ss = ss;
     }
 
     /**
      * Handle a request to render the application's home page.
      * The home page displays the most recently added assets.
      *
+     * @param page can be a number > 1 to display more (older) assets
      * @return information needed to render the home page
-     * @page can be a number > 1 to display more (older) assets
      */
     @GetMapping("/")
     public ModelAndView home(@RequestParam(name = "page", required = false, defaultValue = "1") int page) {
@@ -158,7 +120,7 @@ public class WebApplication {
      */
     @GetMapping(value = "/ss", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public byte[] downloadSpreadsheet() throws IOException {
-        return spreadsheetProcessor.download();
+        return ss.download();
     }
 
     /**
@@ -190,7 +152,7 @@ public class WebApplication {
         else {
             try {
                 // import the contents from the file into the database
-                spreadsheetProcessor.upload(bytes);
+                ss.upload(bytes);
             } catch (Exception x) {
                 success = false;
                 msg = String.format("Unable to process spreadsheet -- %s: %s", x.getClass().getSimpleName(), x.getMessage());
@@ -221,109 +183,6 @@ public class WebApplication {
             mv.addObject("msg", "Invalid login; please try again.");
         }
         return mv;
-    }
-
-    @GetMapping("/pw-reset")
-    public ModelAndView displayPasswordResetForm(@RequestParam(value="msg", required=false) String msg) {
-        var mv = new ModelAndView("password-reset");
-        mv.addObject("msg", msg);
-        return mv;
-    }
-
-    @PostMapping("/pw-reset")
-    public ModelAndView processPasswordResetForm(@RequestParam("email") String email) throws TemplateException, MessagingException, IOException {
-
-        // check to make sure the user provided something that looks like a valid email
-        if (!isValidFormatEmail(email)) {
-            var mv = new LibraryModelAndView("/password-reset");
-            mv.addObject("msg", "Please enter a valid format email");
-            return mv;
-        }
-
-        sendPasswordResetEmail(email);
-        return new ModelAndView("redirect:/pw-reset-email-sent");
-    }
-
-    @GetMapping("/pw-reset-email-sent")
-    public ModelAndView checkEmailNotification() {
-        return new ModelAndView("/check-email");
-    }
-
-    @GetMapping("/pw-reset-process-token")
-    public ModelAndView processPasswordResetToken(@RequestParam("userid") int userId, @RequestParam("token") String token) {
-        var tokenInfo = dao.fetchPasswordResetTokenForUser(userId);
-        var user = dao.fetchUser(userId);
-
-        // check for bad data
-        if (tokenInfo == null || user == null || user.getId() != userId || !token.equals(tokenInfo.getToken())) {
-            var mv = new LibraryModelAndView("redirect:/pw-reset");
-            mv.addObject("msg", "Your password reset failed (bad data).  Try again?");
-            return mv;
-        }
-
-        // check for expired token
-        var tokenTimeMillis = tokenInfo.getCreationTime().getTime();
-        var tokenAgeMillis = System.currentTimeMillis() - tokenTimeMillis;
-        var tokenLifespanMillis = TOKEN_LIFESPAN_MINUTES * 60000;
-        if (tokenAgeMillis > tokenLifespanMillis) {
-            var mv = new LibraryModelAndView("redirect:/pw-reset");
-            mv.addObject("msg", "Your password reset failed (bad data).  Try again?");
-            return mv;
-        }
-
-        // reset the user's password
-        var password = pwGenerator.generate(10, true, false, true, false);
-        var encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
-        var encryptedPw = encoder.encode(password);
-        dao.setPassword(userId, encryptedPw);
-
-        // display the confirmation page
-        var mv = new LibraryModelAndView("/password-reset-complete");
-        mv.addObject("password", password);
-        return mv;
-    }
-
-    protected boolean isValidFormatEmail(String email) {
-        // from https://www.baeldung.com/java-email-validation-regex
-        var emailRegex = "^(?=.{1,64}@)[A-Za-z0-9\\+_-]+(\\.[A-Za-z0-9\\+_-]+)*@"
-                + "[^-][A-Za-z0-9\\+-]+(\\.[A-Za-z0-9\\+-]+)*(\\.[A-Za-z]{2,})$";
-        var pattern = Pattern.compile(emailRegex);
-        return pattern.matcher(email).matches();
-    }
-
-    protected void sendPasswordResetEmail(String emailAddress) throws IOException, TemplateException, MessagingException {
-
-        // fetch the user account associated with this email
-        var user = dao.fetchUser(emailAddress);
-        if (user == null) {
-
-            // if there is no user account associated with this email, just quietly do nothing
-            return;
-        }
-
-        // generate a simple 6-character token
-        var token = pwGenerator.generate(6, false, true, true, false);
-
-        // save this password reset token
-        dao.storePasswordResetToken(user.getId(), token);
-
-        // calculate token issue time and expiration times
-        var issueDate = new Date();
-        var expirationDate = new Date(issueDate.getTime() + (TOKEN_LIFESPAN_MINUTES * 60000));
-
-        // collect information needed to render the "reset password" email
-        var model = new HashMap<String, Object>();
-        model.put("user", user);
-        model.put("token", token);
-        model.put("tokenIssueDateTime", issueDate);
-        model.put("tokenExpirationDateTime", expirationDate);
-        model.put("tokenLifespan", TOKEN_LIFESPAN_MINUTES);
-        model.put("applicationBaseURL", applicationBaseURL);
-
-        // render and send the "reset password" email
-        var email = emailTemplateProcessor.process(EmailTemplate.RESET_PASSWORD, model);
-        email.setTo(emailAddress);
-        emailSender.sendEmail(email);
     }
 
     @GetMapping(value = "/book", produces = "application/epub+zip")
@@ -360,7 +219,7 @@ public class WebApplication {
         var contentLength = Math.toIntExact(obj.getObjectMetadata().getContentLength());
 
         // figure out a mime type based on the file's extension
-        var mimeType = mimeTypeForFile(filename);
+        var mimeType = LibUtils.mimeTypeForFile(filename);
 
         // write the S3 object info to the response
         response.setContentLength(contentLength);
@@ -368,33 +227,5 @@ public class WebApplication {
         response.setHeader("Content-Disposition", disposition);
         obj.getObjectContent().transferTo(response.getOutputStream());
         response.flushBuffer();
-    }
-
-    /**
-     * determine a file's mime type based on its extension
-     *
-     * @param filename a filename
-     * @return the mime type
-     */
-    public String mimeTypeForFile(String filename) {
-        if (filename.toLowerCase().endsWith(".epub")) {
-            return "application/epub+zip";
-        } else if (filename.toLowerCase().endsWith(".m4b")) {
-            return "audio/mp4a-latm";
-        }
-
-        throw new RuntimeException("can't determine mime type for file " + filename);
-    }
-
-    class LibraryModelAndView extends ModelAndView {
-        public LibraryModelAndView(String view) {
-            super(view);
-
-            var principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-
-            if (principal instanceof User user) {
-                addObject("user", user);
-            }
-        }
     }
 }

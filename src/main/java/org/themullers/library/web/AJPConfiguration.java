@@ -1,4 +1,4 @@
-package org.themullers.library;
+package org.themullers.library.web;
 
 import org.apache.catalina.connector.Connector;
 import org.apache.coyote.ajp.AjpNioProtocol;
@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class SpringConfiguration {
+public class AJPConfiguration {
     /**
      * Configure the embedded tomcat server so that it listens for the AJP protocol
      * on port 8009.  Don't require a secret.  This is less secure, but I could not
