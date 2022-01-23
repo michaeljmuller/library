@@ -1,5 +1,9 @@
 package org.themullers.library;
 
+import com.amazonaws.services.s3.model.S3Object;
+
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -69,5 +73,36 @@ public class LibUtils {
         }
 
         throw new RuntimeException("can't determine mime type for file " + filename);
+    }
+
+
+    /**
+     * Writes an S3 object to an HTTP response object
+     *
+     * @param obj      the S3 object to write
+     * @param response the HTTP response object to write to
+     * @throws IOException thrown if an unexpected error occurs writing to the response
+     */
+    public static void writeS3ObjectToResponse(S3Object obj, HttpServletResponse response) throws IOException {
+
+        // escape any quotation marks in the filename with a backslash
+        var filename = obj.getKey();
+        var escapedFilename = filename.replace("\"", "\\\"");
+
+        // build the content disposition
+        var disposition = String.format("attachment; filename=\"%s\"", escapedFilename);
+
+        // convert the content length from the object metadata into an int as required by the servlet response object
+        var contentLength = Math.toIntExact(obj.getObjectMetadata().getContentLength());
+
+        // figure out a mime type based on the file's extension
+        var mimeType = LibUtils.mimeTypeForFile(filename);
+
+        // write the S3 object info to the response
+        response.setContentLength(contentLength);
+        response.setContentType(mimeType);
+        response.setHeader("Content-Disposition", disposition);
+        obj.getObjectContent().transferTo(response.getOutputStream());
+        response.flushBuffer();
     }
 }

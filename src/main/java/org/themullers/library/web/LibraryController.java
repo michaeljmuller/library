@@ -1,6 +1,5 @@
 package org.themullers.library.web;
 
-import com.amazonaws.services.s3.model.S3Object;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,6 +13,8 @@ import org.themullers.library.db.LibraryDAO;
 import org.themullers.library.s3.LibraryOSAO;
 
 import javax.servlet.http.HttpServletResponse;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 @RestController
@@ -189,43 +190,25 @@ public class LibraryController {
     public void getEbook(@RequestParam(value = "id") int assetId, HttpServletResponse response) throws IOException {
         var id = dao.fetchEbookObjectKey(assetId);
         var obj = osao.readObject(id);
-        writeS3ObjectToResponse(obj, response);
+        LibUtils.writeS3ObjectToResponse(obj, response);
     }
 
     @GetMapping(value = "/audiobook", produces = "application/epub+zip")
     public void getAudiobook(@RequestParam(value = "id") int assetId, HttpServletResponse response) throws IOException {
         var id = dao.fetchAudiobookObjectKey(assetId);
         var obj = osao.readObject(id);
-        writeS3ObjectToResponse(obj, response);
+        LibUtils.writeS3ObjectToResponse(obj, response);
     }
 
-    /**
-     * Writes an S3 object to an HTTP response object
-     *
-     * @param obj      the S3 object to write
-     * @param response the HTTP response object to write to
-     * @throws IOException thrown if an unexpected error occurs writing to the response
-     */
-    protected void writeS3ObjectToResponse(S3Object obj, HttpServletResponse response) throws IOException {
+    @GetMapping(value="/asset")
+    public ModelAndView uploadAsset() {
+        return new LibraryModelAndView("/upload-asset-form");
+    }
 
-        // escape any quotation marks in the filename with a backslash
-        var filename = obj.getKey();
-        var escapedFilename = filename.replace("\"", "\\\"");
-
-        // build the content disposition
-        var disposition = String.format("attachment; filename=\"%s\"", escapedFilename);
-
-        // convert the content length from the object metadata into an int as required by the servlet response object
-        var contentLength = Math.toIntExact(obj.getObjectMetadata().getContentLength());
-
-        // figure out a mime type based on the file's extension
-        var mimeType = LibUtils.mimeTypeForFile(filename);
-
-        // write the S3 object info to the response
-        response.setContentLength(contentLength);
-        response.setContentType(mimeType);
-        response.setHeader("Content-Disposition", disposition);
-        obj.getObjectContent().transferTo(response.getOutputStream());
-        response.flushBuffer();
+    @PostMapping(value="/asset")
+    public void recieveAssetBinary(@RequestParam("file") MultipartFile file) throws FileNotFoundException, IOException {
+        try (var fos = new FileOutputStream("~mmuller/" + file.getOriginalFilename())) {
+            file.getInputStream().transferTo(fos);
+        }
     }
 }

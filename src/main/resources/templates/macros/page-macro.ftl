@@ -1,4 +1,4 @@
-<#macro page title>
+<#macro page title additionalHeadContent="">
 <!DOCTYPE html>
 <#setting url_escaping_charset="UTF-8">
 <html lang="en">
@@ -12,6 +12,8 @@
         <#-- these are for the top nav, which was lifted from https://codepen.io/andornagy/pen/xhiJH -->
         <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
         <link rel="stylesheet" href="/styles/topnav.css">
+
+        ${additionalHeadContent!}
     </head>
     <body>
 
