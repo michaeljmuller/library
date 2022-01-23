@@ -77,6 +77,14 @@
             xhr.open('POST', url, true)
 
             xhr.addEventListener('readystatechange', function(e) {
+
+                var log = document.querySelector('.event-log');
+                log.textContent = log.textContent + "event: " + e.type + " " + xhr.readyState + "\n";
+
+                if (xhr.readyState == 4) {
+                    log.textContent = log.textContent + "status: " + xhr.status + "\n";
+                }
+
                 if (xhr.readyState == 4 && xhr.status == 200) {
                     // Done. Inform the user
                 }
