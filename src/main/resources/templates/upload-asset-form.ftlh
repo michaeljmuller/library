@@ -85,13 +85,17 @@
                 }
             })
 
+            xhr.addEventListener('loadstart', handleEvent);
+            xhr.addEventListener('load', handleEvent);
+            xhr.addEventListener('loadend', handleEvent);
             xhr.addEventListener('progress', handleEvent);
+            xhr.addEventListener('error', handleEvent);
+            xhr.addEventListener('abort', handleEvent);
+
 
             formData.append('file', file)
             formData.append('${_csrf.parameterName}', '${_csrf.token}')
             xhr.send(formData)
-
-
         }
 
     </script>
