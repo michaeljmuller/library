@@ -207,7 +207,7 @@ public class LibraryController {
 
     @PostMapping(value="/asset")
     public void recieveAssetBinary(@RequestParam("file") MultipartFile file) throws FileNotFoundException, IOException {
-        try (var fos = new FileOutputStream("~mmuller/" + file.getOriginalFilename())) {
+        try (var fos = new FileOutputStream("/home/mmuller/" + file.getOriginalFilename())) {
             file.getInputStream().transferTo(fos);
         }
     }
