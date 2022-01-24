@@ -17,7 +17,7 @@
     </head>
     <body>
 
-        <form id="logoutform" action="/logout" method="post"><input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"></form>
+        <form id="logoutform" action="/logout" method="post"><#if _csrf??><input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"></#if></form>
 
         <div id="container">
             <nav>

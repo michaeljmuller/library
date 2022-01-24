@@ -5,11 +5,13 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -48,6 +50,18 @@ public class LibraryOSAO implements InitializingBean {
 
     public S3Object readObject(String objectKey) {
         return s3.getObject(getBucketName(), objectKey);
+    }
+
+    public void uploadObject(InputStream is, long contentLength, String objectKey) {
+
+        // check to make sure we're not stomping an existing object
+        if (s3.doesObjectExist(getBucketName(), objectKey)) {
+            throw new ObjectStoreException("object already exists in store with key " + objectKey);
+        }
+
+        var metadata = new ObjectMetadata();
+        metadata.setContentLength(contentLength);
+        s3.putObject(getBucketName(), objectKey, is, metadata);
     }
 
     // SPRING INITIALIZATION

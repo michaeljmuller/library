@@ -48,7 +48,7 @@ public class Security extends WebSecurityConfigurerAdapter {
         // remember users when they come back to the site
         http.rememberMe(conf -> {
             conf.alwaysRemember(true);
-            conf.key("sdlkfjdsafljk");
+            conf.key("library-remember-key");
         });
     }
 

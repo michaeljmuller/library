@@ -1,120 +1,28 @@
 <#import "macros/page-macro.ftl" as c/>
 
-<#-- from https://www.smashingmagazine.com/2018/01/drag-drop-file-uploader-vanilla-js/ -->
-
 <#assign hdr>
-    <style>
-        #dropArea {
-            width: 300px;
-            height: 300px;
-            padding: 20px;
-            border-style: dashed;
-            border-color: black;
-            border-width: 1px;
-            background-color: #dddddd;
-        }
 
-        #dropArea.highlight {
-            border-style: solid;
-            border-width: 2px;
-        }
-    </style>
-    <script type="application/ecmascript">
-
+    <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" type="text/css" />
+    <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+    <script>
+        Dropzone.autoDiscover = false;
         window.onload = function() {
-            let dropArea = document.getElementById('dropArea');
-
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropArea.addEventListener(eventName, preventDefaults, false)
-            });
-
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropArea.addEventListener(eventName, highlight, false)
-            });
-
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropArea.addEventListener(eventName, unhighlight, false)
-            });
-
-            dropArea.addEventListener('drop', handleDrop, false)
-        }
-
-        function highlight(e) {
-            dropArea.classList.add('highlight')
-        }
-
-        function unhighlight(e) {
-            dropArea.classList.remove('highlight')
-        }
-
-        function preventDefaults (e) {
-            e.preventDefault()
-            e.stopPropagation()
-        }
-
-        function handleDrop(e) {
-            let dt = e.dataTransfer
-            let files = dt.files
-
-            handleFiles(files)
-        }
-
-        function handleFiles(files) {
-            ([...files]).forEach(uploadFile)
-        }
-
-
-        function handleEvent(e) {
-            var log = document.querySelector('.event-log');
-            log.textContent = log.textContent + "event: " + e.type + " " + e.loaded + " bytes transferred\n";
-        }
-
-        function uploadFile(file) {
-            var url = '/asset'
-            var xhr = new XMLHttpRequest()
-            var formData = new FormData()
-
-            xhr.open('POST', url, true)
-
-            xhr.addEventListener('readystatechange', function(e) {
-
-                var log = document.querySelector('.event-log');
-                log.textContent = log.textContent + "event: " + e.type + " " + xhr.readyState + "\n";
-
-                if (xhr.readyState == 4) {
-                    log.textContent = log.textContent + "status: " + xhr.status + "\n";
+            let myDropzone = new Dropzone("div#dz", {
+                url: '/asset',
+                method: 'post',
+                chunking: true,
+                <#if _csrf??>
+                init: function() {
+                    this.on("sending", function(file, xhr, formData) {
+                        formData.append("${_csrf.parameterName}", "${_csrf.token}")
+                    })
                 }
-
-                if (xhr.readyState == 4 && xhr.status == 200) {
-                    // Done. Inform the user
-                }
-                else if (xhr.readyState == 4 && xhr.status != 200) {
-                    // Error. Inform the user
-                }
+                </#if>
             })
-
-            xhr.addEventListener('loadstart', handleEvent);
-            xhr.addEventListener('load', handleEvent);
-            xhr.addEventListener('loadend', handleEvent);
-            xhr.addEventListener('progress', handleEvent);
-            xhr.addEventListener('error', handleEvent);
-            xhr.addEventListener('abort', handleEvent);
-
-
-            formData.append('file', file)
-            formData.append('${_csrf.parameterName}', '${_csrf.token}')
-            xhr.send(formData)
         }
-
     </script>
 </#assign>
 
 <@c.page title="Upload Asset" additionalHeadContent=hdr>
-    <form action="/uploadAsset" method="post">
-
-    </form>
-    <div id="dropArea">
-        Drop yer ebooks here.
-    </div>
-    <textarea readonly class="event-log"></textarea>
+    <div id="dz"class="dropzone"></div>
 </@c.page>

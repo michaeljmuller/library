@@ -11,7 +11,7 @@
 
     <div class="section">Upload Metadata</div>
 
-    <form method="POST" enctype="multipart/form-data" action="/ss?${_csrf.parameterName}=${_csrf.token}">
+    <form method="POST" enctype="multipart/form-data" action="/ss<#if _csrf??>?${_csrf.parameterName}=${_csrf.token}</#if>">
         <div><input type="file" name="file" /></div>
         <div><input class="submitButton" type="submit" value="Upload Metadata" /></div>
     </form>

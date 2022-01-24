@@ -14,7 +14,6 @@ import org.themullers.library.s3.LibraryOSAO;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 @RestController
@@ -206,9 +205,8 @@ public class LibraryController {
     }
 
     @PostMapping(value="/asset")
-    public void recieveAssetBinary(@RequestParam("file") MultipartFile file) throws FileNotFoundException, IOException {
-        try (var fos = new FileOutputStream("/home/mmuller/" + file.getOriginalFilename())) {
-            file.getInputStream().transferTo(fos);
-        }
+    public void receiveAssetBinary(@RequestParam("file") MultipartFile file) throws FileNotFoundException, IOException {
+        var size = file.getSize();
+        osao.uploadObject(file.getInputStream(), file.getSize(), file.getOriginalFilename());
     }
 }

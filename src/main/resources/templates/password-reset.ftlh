@@ -11,7 +11,9 @@
             I will email you a link to generate a new password.
         </div>
         <input type="text" placeholder="email address" name="email" id="email" autofocus/>
-        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+        <#if _csrf??>
+            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+        </#if>
         <button onclick="document.getElementById('loginForm').submit()">
             <span class="state">Reset Password</span>
         </button>
