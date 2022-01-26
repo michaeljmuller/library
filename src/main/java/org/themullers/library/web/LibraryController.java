@@ -6,6 +6,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
+import org.themullers.library.Asset;
 import org.themullers.library.LibUtils;
 import org.themullers.library.SpreadsheetService;
 import org.themullers.library.Utils;
@@ -15,6 +16,9 @@ import org.themullers.library.s3.LibraryOSAO;
 import javax.servlet.http.HttpServletResponse;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Date;
+import java.util.stream.Collectors;
 
 @RestController
 public class LibraryController {
@@ -209,4 +213,58 @@ public class LibraryController {
         var size = file.getSize();
         osao.uploadObject(file.getInputStream(), file.getSize(), file.getOriginalFilename());
     }
+
+    @GetMapping("/forms/editbook/{id}")
+    public ModelAndView displayEditBookForm(@PathVariable("id") int assetId) {
+
+        var mv = new LibraryModelAndView("/edit-book-form");
+
+        // fetch the asset to edit using the id from the URL
+        var asset = new Asset(); asset.setId(assetId);
+        asset.setTitle("the title of the book");
+        asset.addTag("Humor");
+        asset.addTag("First Contact");
+        asset.setAcquisitionDate(new Date());
+        //mv.addObject("asset", dao.fetchAsset(assetId));
+
+        // get lists of object ids of each type that are not currently attached to any assets in the database
+        var objIds = LibUtils.unattachedAssetObjectIds(dao, osao);
+        var epubs = objIds.stream().filter(o -> o.toLowerCase().endsWith("epub")).collect(Collectors.toList());
+        var audiobooks = objIds.stream().filter(o -> o.toLowerCase().endsWith("m4b")).collect(Collectors.toList());
+
+        // if there is an epub already associated with this asset, add it to the list
+        var epub = asset.getEbookS3ObjectKey();
+        if (epub != null) {
+            epubs.add(epub);
+            Collections.sort(epubs);
+        }
+
+        // if there is an audiobook already attched to this asset, add it to the list
+        var audiobook = asset.getAudiobookS3ObjectKey();
+        if (audiobook != null) {
+            audiobooks.add(audiobook);
+            Collections.sort(audiobooks);
+        }
+
+        mv.addObject("asset", asset);
+        mv.addObject("authorList", dao.fetchAllAuthors());
+        mv.addObject("seriesList", dao.fetchAllSeries());
+        mv.addObject("tagList", dao.fetchAllTags());
+        mv.addObject("unattachedEpubs", epubs);
+        mv.addObject("unattachedAudiobooks", audiobooks);
+        return mv;
+    }
+
+    /**
+     * Updates the metadata for the given asset.
+     *
+     * @param id  The asset id.
+     * @return
+     */
+    @PostMapping("/metadata/book/{id}")
+    public ModelAndView updateMetadata(@PathVariable("id") int id) {
+        // TODO
+        return null;
+    }
+
 }

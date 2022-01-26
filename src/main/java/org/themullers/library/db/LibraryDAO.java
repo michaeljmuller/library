@@ -113,6 +113,16 @@ public class LibraryDAO {
     }
 
     /**
+     * Returns the asset matching a specified id
+     * @param assetId  the id to use to find the asset
+     * @return  the matching asset
+     */
+    public Asset fetchAsset(int assetId) {
+        var assets = jt.query("select %s from assets where id = ? limit 1", LibraryDAO::mapAsset, assetId);
+        return assets == null || assets.size() < 1 ? null : assets.get(0);
+    }
+
+    /**
      * Returns all the assets written by a given author.
      * @param author  The name of an author whose assets should be returned.
      * @return  list of assets
@@ -218,8 +228,23 @@ public class LibraryDAO {
      * @return  a list of authors
      */
     public List<String> fetchAllAuthors() {
-        String sql = "select distinct author from assets order by author";
-        return jt.queryForList(sql, String.class);
+        return jt.queryForList("select distinct author from assets where author is not null order by author", String.class);
+    }
+
+    /**
+     * Returns a list of all the series with assets in the library.
+     * @return  a list of series
+     */
+    public List<String> fetchAllSeries() {
+        return jt.queryForList("select distinct series from assets where series is not null order by series", String.class);
+    }
+
+    /**
+     * Returns a list of all the tags used in the library.
+     * @return a list of tags
+     */
+    public List<String> fetchAllTags() {
+        return jt.queryForList("select distinct tag from tags order by tag", String.class);
     }
 
     /**
@@ -231,6 +256,14 @@ public class LibraryDAO {
         // TODO: remove this if it's not needed
         var count = jt.queryForObject("select count(*) from cover_images where ebook_s3_object_key = ?", Integer.class, s3key);
         return count != null && count > 0;
+    }
+
+    public List<String> fetchAllEpubObjectIds() {
+        return jt.queryForList("select distinct ebook_s3_object_key from assets where ebook_s3_object_key is not null order by ebook_s3_object_key", String.class);
+    }
+
+    public List<String> fetchAllAudiobookObjectIds() {
+        return jt.queryForList("select distinct audiobook_s3_object_key from assets where audiobook_s3_object_key is not null order by audiobook_s3_object_key", String.class);
     }
 
     /**

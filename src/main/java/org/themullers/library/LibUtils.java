@@ -1,6 +1,8 @@
 package org.themullers.library;
 
 import com.amazonaws.services.s3.model.S3Object;
+import org.themullers.library.db.LibraryDAO;
+import org.themullers.library.s3.LibraryOSAO;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -104,5 +106,27 @@ public class LibUtils {
         response.setHeader("Content-Disposition", disposition);
         obj.getObjectContent().transferTo(response.getOutputStream());
         response.flushBuffer();
+    }
+
+    public static List<String> unattachedAssetObjectIds(LibraryDAO dao, LibraryOSAO osao) {
+
+        var unattachedAssetObjectIds = new LinkedList<String>();
+
+        // get a list of the object IDs that are attached to assets in the database
+        var attachedEpubs = dao.fetchAllEpubObjectIds();
+        var attachedAudiobooks = dao.fetchAllAudiobookObjectIds();
+
+        // for each asset in the object store
+        for (var objId : osao.listObjects()) {
+
+            // if that asset's id is not associated with any assets in the database
+            if (!attachedEpubs.contains(objId) && !attachedAudiobooks.contains(objId)) {
+
+                // add it to the list of unattached object ids
+                unattachedAssetObjectIds.add(objId);
+            }
+        }
+
+        return unattachedAssetObjectIds;
     }
 }
