@@ -18,47 +18,47 @@ public class LibUtils {
     public final static String STANDALONE = "Standalone";
 
     /**
-     * Groups a list of assets by the series those assets are associated with;
-     * assets from Scalzi's "Old Man's War" series would be grouped separately
-     * from assets in his "Interdependency" series.
+     * Groups a list of books by the series those books are associated with;
+     * books from Scalzi's "Old Man's War" series would be grouped separately
+     * from books in his "Interdependency" series.
      *
      * The returned data structure's elements (the keys and values of the map)
-     * are ordered chronologically by publication date; the assets within that series
+     * are ordered chronologically by publication date; the books within that series
      * (the values) are ordered by their publication date and the series (the keys)
      * are ordered by the publication date of the earliest book in the series.
      *
-     * If the asset is not in a series (if getSeries() returns null), the asset
+     * If the book is not in a series (if getSeries() returns null), the book
      * will be grouped as STANDALONE.
      *
-     * @param assets The assets to organize
-     * @return  A map of assets grouped by series.
+     * @param books The books to organize
+     * @return  A map of books grouped by series.
      */
-    public static Map<String, List<Asset>> groupAssetsBySeries(List<Asset> assets) {
+    public static Map<String, List<Book>> groupBooksBySeries(List<Book> books) {
 
-        // start by sorting the provided assets by their publication year
-        assets.sort((Asset a, Asset b) -> a.getPublicationYear() - b.getPublicationYear());
+        // start by sorting the provided books by their publication year
+        books.sort((Book a, Book b) -> a.getPublicationYear() - b.getPublicationYear());
 
         // create a map to hold the groupings
-        var groupedAssets = new LinkedHashMap<String, List<Asset>>();
+        var groupedBooks = new LinkedHashMap<String, List<Book>>();
 
-        // for each asset
-        for (var asset : assets) {
+        // for each book
+        for (var book : books) {
 
             // get the series (or use STANDALONE as the series if there isn't one)
-            var series = Utils.ifNull(asset.getSeries(), STANDALONE);
+            var series = Utils.ifNull(book.getSeries(), STANDALONE);
 
-            // if this is the first asset we've encountered for a series, create an entry with an empty list
-            groupedAssets.putIfAbsent(series, new LinkedList<>());
+            // if this is the first book we've encountered for a series, create an entry with an empty list
+            groupedBooks.putIfAbsent(series, new LinkedList<>());
 
-            // add the asset to the list of assets for this series
-            groupedAssets.get(series).add(asset);
+            // add the book to the list of books for this series
+            groupedBooks.get(series).add(book);
         }
 
-        return groupedAssets;
+        return groupedBooks;
     }
 
-    public static Map<Integer, Asset> indexAssetsById(List<Asset> assets) {
-        return assets.stream().collect(Collectors.toMap(Asset::getId, Function.identity()));
+    public static Map<Integer, Book> indexBooksById(List<Book> books) {
+        return books.stream().collect(Collectors.toMap(Book::getId, Function.identity()));
     }
 
     /**
@@ -108,25 +108,26 @@ public class LibUtils {
         response.flushBuffer();
     }
 
-    public static List<String> unattachedAssetObjectIds(LibraryDAO dao, LibraryOSAO osao) {
+    public static List<String> unattachedObjectIds(LibraryDAO dao, LibraryOSAO osao) {
 
-        var unattachedAssetObjectIds = new LinkedList<String>();
+        var unattachedObjectIds = new LinkedList<String>();
 
-        // get a list of the object IDs that are attached to assets in the database
+        // get a list of the object IDs that are attached to books in the database
         var attachedEpubs = dao.fetchAllEpubObjectIds();
+        var attachedMobis = dao.fetchAllMobiObjectIds();
         var attachedAudiobooks = dao.fetchAllAudiobookObjectIds();
 
         // for each asset in the object store
         for (var objId : osao.listObjects()) {
 
-            // if that asset's id is not associated with any assets in the database
-            if (!attachedEpubs.contains(objId) && !attachedAudiobooks.contains(objId)) {
+            // if that asset's id is not associated with any books in the database
+            if (!attachedEpubs.contains(objId) && !attachedMobis.contains(objId) && !attachedAudiobooks.contains(objId)) {
 
                 // add it to the list of unattached object ids
-                unattachedAssetObjectIds.add(objId);
+                unattachedObjectIds.add(objId);
             }
         }
 
-        return unattachedAssetObjectIds;
+        return unattachedObjectIds;
     }
 }

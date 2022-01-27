@@ -6,7 +6,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
-import org.themullers.library.Asset;
+import org.themullers.library.Book;
 import org.themullers.library.LibUtils;
 import org.themullers.library.SpreadsheetService;
 import org.themullers.library.Utils;
@@ -36,20 +36,20 @@ public class LibraryController {
 
     /**
      * Handle a request to render the application's home page.
-     * The home page displays the most recently added assets.
+     * The home page displays the most recently added books.
      *
-     * @param page can be a number > 1 to display more (older) assets
+     * @param page can be a number > 1 to display more (older) books
      * @return information needed to render the home page
      */
     @GetMapping("/")
     public ModelAndView home(@RequestParam(name = "page", required = false, defaultValue = "1") int page) {
         var mv = new LibraryModelAndView("home");
 
-        // get the most recent assets
-        int assetsPerPage = 6;
-        var newReleases = dao.fetchNewestAssets(assetsPerPage, page * assetsPerPage);
+        // get the most recent books
+        int booksPerPage = 6;
+        var newReleases = dao.fetchNewestBooks(booksPerPage, page * booksPerPage);
         mv.addObject("page", page);
-        mv.addObject("assets", newReleases);
+        mv.addObject("books", newReleases);
         return mv;
     }
 
@@ -68,39 +68,39 @@ public class LibraryController {
     /**
      * Handle a request to render the "author" page.
      *
-     * @param author the author whose assets are to be rendered
+     * @param author the author whose books are to be rendered
      * @return information needed to render the page
      */
     @GetMapping("/author")
     public ModelAndView author(@RequestParam(name = "name") String author) {
 
-        // get the assets, group them by series, and then pull out the stand-alone assets to be handled uniquely
-        var assets = dao.fetchAssetsForAuthor(author);
-        var groupedAssets = LibUtils.groupAssetsBySeries(assets);
-        var standalone = groupedAssets.remove(LibUtils.STANDALONE);
+        // get the books, group them by series, and then pull out the stand-alone books to be handled uniquely
+        var books = dao.fetchBooksForAuthor(author);
+        var groupedBooks = LibUtils.groupBooksBySeries(books);
+        var standalone = groupedBooks.remove(LibUtils.STANDALONE);
 
         // build the model
         var mv = new LibraryModelAndView("author");
         mv.addObject("authorName", author);
-        mv.addObject("groupedAssets", groupedAssets);
+        mv.addObject("groupedBooks", groupedBooks);
         mv.addObject("standalone", standalone);
         return mv;
     }
 
     /**
-     * Handle a request to provide a cover image for an asset.
+     * Handle a request to provide a cover image for an book.
      *
-     * @param book the s3 object id of the book whose cover should be rendered
-     * @return information needed to render the page
+     * @param bookId the id of the book whose cover should be rendered
+     * @return the binary contents of the image
      */
     @GetMapping(value = "/cover", produces = "image/jpeg")
-    public byte[] cover(@RequestParam(name = "book") String book) throws IOException {
-        return dao.fetchImageForEbook(book);
+    public byte[] cover(@RequestParam(name = "book") int bookId) throws IOException {
+        return dao.fetchImageForEbook(bookId);
     }
 
     /**
      * Handle a request to render the page that allows the user to upload or download a spreadsheet
-     * containing metadata for all the assets in the library.
+     * containing metadata for all the books in the library.
      *
      * @param msg       an optional message to be displayed indicating results from an earlier operation
      * @param status    an optional indicator of the success of an earlier operation; should be "success" or "failure"
@@ -117,7 +117,7 @@ public class LibraryController {
     }
 
     /**
-     * Handle a request to download a spreadsheet containing metadata for each asset in the library.
+     * Handle a request to download a spreadsheet containing metadata for each book in the library.
      *
      * @return a spreadsheet
      * @throws IOException thrown if an unexpected error occurs generating the spreadsheet
@@ -128,7 +128,7 @@ public class LibraryController {
     }
 
     /**
-     * Handle a request to upload a spreadsheet containing metadata for each asset in the library.
+     * Handle a request to upload a spreadsheet containing metadata for each book in the library.
      *
      * @param file               the spreadsheet to upload
      * @param redirectAttributes a Spring Boot object that allows this method to store information to be rendered in another web page
@@ -190,15 +190,15 @@ public class LibraryController {
     }
 
     @GetMapping(value = "/book", produces = "application/epub+zip")
-    public void getEbook(@RequestParam(value = "id") int assetId, HttpServletResponse response) throws IOException {
-        var id = dao.fetchEbookObjectKey(assetId);
+    public void getEbook(@RequestParam(value = "bookId") int bookId, HttpServletResponse response) throws IOException {
+        var id = dao.fetchEpubObjectKey(bookId);
         var obj = osao.readObject(id);
         LibUtils.writeS3ObjectToResponse(obj, response);
     }
 
     @GetMapping(value = "/audiobook", produces = "application/epub+zip")
-    public void getAudiobook(@RequestParam(value = "id") int assetId, HttpServletResponse response) throws IOException {
-        var id = dao.fetchAudiobookObjectKey(assetId);
+    public void getAudiobook(@RequestParam(value = "bookId") int bookId, HttpServletResponse response) throws IOException {
+        var id = dao.fetchAudiobookObjectKey(bookId);
         var obj = osao.readObject(id);
         LibUtils.writeS3ObjectToResponse(obj, response);
     }
@@ -215,50 +215,52 @@ public class LibraryController {
     }
 
     @GetMapping("/forms/editbook/{id}")
-    public ModelAndView displayEditBookForm(@PathVariable("id") int assetId) {
+    public ModelAndView displayEditBookForm(@PathVariable("id") int bookId) {
 
         var mv = new LibraryModelAndView("/edit-book-form");
 
-        // fetch the asset to edit using the id from the URL
-        var asset = new Asset(); asset.setId(assetId);
-        asset.setTitle("the title of the book");
-        asset.addTag("Humor");
-        asset.addTag("First Contact");
-        asset.setAcquisitionDate(new Date());
-        //mv.addObject("asset", dao.fetchAsset(assetId));
+        // fetch the book to edit using the id from the URL
+        var book = new Book(); book.setId(bookId);
+        book.setTitle("the title of the book");
+        book.addTag("Humor");
+        book.addTag("First Contact");
+        book.setAcquisitionDate(new Date());
+        //mv.addObject("book", dao.fetchBook(bookId));
 
-        // get lists of object ids of each type that are not currently attached to any assets in the database
-        var objIds = LibUtils.unattachedAssetObjectIds(dao, osao);
+        // get lists of object ids of each type that are not currently attached to any books in the database
+        var objIds = LibUtils.unattachedObjectIds(dao, osao);
         var epubs = objIds.stream().filter(o -> o.toLowerCase().endsWith("epub")).collect(Collectors.toList());
+        var mobis = objIds.stream().filter(o -> o.toLowerCase().endsWith("mobi")).collect(Collectors.toList());
         var audiobooks = objIds.stream().filter(o -> o.toLowerCase().endsWith("m4b")).collect(Collectors.toList());
 
-        // if there is an epub already associated with this asset, add it to the list
-        var epub = asset.getEbookS3ObjectKey();
+        // if there is an epub already associated with this book, add it to the list
+        var epub = book.getEpubObjectKey();
         if (epub != null) {
             epubs.add(epub);
             Collections.sort(epubs);
         }
 
-        // if there is an audiobook already attched to this asset, add it to the list
-        var audiobook = asset.getAudiobookS3ObjectKey();
+        // if there is an audiobook already attched to this book, add it to the list
+        var audiobook = book.getAudiobookObjectKey();
         if (audiobook != null) {
             audiobooks.add(audiobook);
             Collections.sort(audiobooks);
         }
 
-        mv.addObject("asset", asset);
+        mv.addObject("book", book);
         mv.addObject("authorList", dao.fetchAllAuthors());
         mv.addObject("seriesList", dao.fetchAllSeries());
         mv.addObject("tagList", dao.fetchAllTags());
         mv.addObject("unattachedEpubs", epubs);
+        mv.addObject("unattachedMobis", mobis);
         mv.addObject("unattachedAudiobooks", audiobooks);
         return mv;
     }
 
     /**
-     * Updates the metadata for the given asset.
+     * Updates the metadata for the given book.
      *
-     * @param id  The asset id.
+     * @param id  The book id.
      * @return
      */
     @PostMapping("/metadata/book/{id}")

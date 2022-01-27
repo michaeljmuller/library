@@ -3,11 +3,11 @@
 
 <@c.page title="${authorName}">
 
-    <table class="asset-table">
+    <table class="book-table">
 
-        <#list groupedAssets as series, assets>
+        <#list groupedBooks as series, books>
             <div class="section">${series}</div>
-            <@b.books bookList=assets></@b.books>
+            <@b.books bookList=books></@b.books>
         </#list>
 
         <#if standalone??>

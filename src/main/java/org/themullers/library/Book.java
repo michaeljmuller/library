@@ -3,10 +3,10 @@ package org.themullers.library;
 import java.util.*;
 
 /**
- * A simple Java class containing information about one of the library's assets.
+ * A simple Java class containing information about one of the library's books.
  */
-public class Asset {
-    private int id;
+public class Book {
+    private Integer id;
     private String title;
     private String author;
     private String author2;
@@ -17,17 +17,18 @@ public class Asset {
     private Date acquisitionDate;
     private String altTitle1;
     private String altTitle2;
-    private String ebookS3ObjectKey;
-    private String audiobookS3ObjectKey;
+    private String epubObjectKey;
+    private String mobiObjectKey;
+    private String audiobookObjectKey;
     private String amazonId;
 
     private Set<String> tags = new HashSet<>();
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -111,20 +112,28 @@ public class Asset {
         this.altTitle2 = altTitle2;
     }
 
-    public String getEbookS3ObjectKey() {
-        return ebookS3ObjectKey;
+    public String getEpubObjectKey() {
+        return epubObjectKey;
     }
 
-    public void setEbookS3ObjectKey(String ebookS3ObjectKey) {
-        this.ebookS3ObjectKey = ebookS3ObjectKey;
+    public void setEpubObjectKey(String epubObjectKey) {
+        this.epubObjectKey = epubObjectKey;
     }
 
-    public String getAudiobookS3ObjectKey() {
-        return audiobookS3ObjectKey;
+    public String getMobiObjectKey() {
+        return mobiObjectKey;
     }
 
-    public void setAudiobookS3ObjectKey(String audiobookS3ObjectKey) {
-        this.audiobookS3ObjectKey = audiobookS3ObjectKey;
+    public void setMobiObjectKey(String mobiObjectKey) {
+        this.mobiObjectKey = mobiObjectKey;
+    }
+
+    public String getAudiobookObjectKey() {
+        return audiobookObjectKey;
+    }
+
+    public void setAudiobookObjectKey(String audiobookObjectKey) {
+        this.audiobookObjectKey = audiobookObjectKey;
     }
 
     public String getAmazonId() {
@@ -149,7 +158,7 @@ public class Asset {
 
     @Override
     public boolean equals(Object object) {
-        if (object instanceof Asset other) {
+        if (object instanceof Book other) {
             return Utils.objectsAreEqual(this.id, other.id) &&
                     Utils.objectsAreEqual(this.title, other.title) &&
                     Utils.objectsAreEqual(this.author, other.author) &&
@@ -159,8 +168,9 @@ public class Asset {
                     Utils.objectsAreEqual(this.seriesSequence, other.seriesSequence) &&
                     Utils.objectsAreEqual(this.acquisitionDate, other.acquisitionDate) &&
                     Utils.objectsAreEqual(this.altTitle1, other.altTitle1) &&
-                    Utils.objectsAreEqual(this.ebookS3ObjectKey, other.ebookS3ObjectKey) &&
-                    Utils.objectsAreEqual(this.audiobookS3ObjectKey, other.audiobookS3ObjectKey) &&
+                    Utils.objectsAreEqual(this.epubObjectKey, other.epubObjectKey) &&
+                    Utils.objectsAreEqual(this.mobiObjectKey, other.mobiObjectKey) &&
+                    Utils.objectsAreEqual(this.audiobookObjectKey, other.audiobookObjectKey) &&
                     Utils.objectsAreEqual(this.amazonId, other.amazonId) &&
                     Utils.objectsAreEqual(this.tags, other.tags); // note: set equals() ignores order https://docs.oracle.com/javase/6/docs/api/java/util/Set.html#equals(java.lang.Object)
         }

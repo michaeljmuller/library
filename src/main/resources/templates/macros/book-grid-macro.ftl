@@ -3,7 +3,7 @@
         <#list bookList as book>
             <div class="book-grid-item">
                 <div class="cover-image-container">
-                    <img src="/cover?book=${book.ebookS3ObjectKey?url}" />
+                    <img src="/cover?book=${book.id?c}" />
                 </div>
                 <div class="book-info">
                     <div class="book-info-text">

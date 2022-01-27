@@ -38,53 +38,57 @@ public class SpreadsheetService {
 
     public void upload(byte[] spreadsheet) throws IOException {
 
-        // get all the assets from the database, indexed by asset id
-        var dbAssetList = dao.fetchAllAssets();
-        var dbAssetMap = dbAssetList.stream().collect(Collectors.toMap(Asset::getId, Function.identity()));
+        // get all the books from the database, indexed by book id
+        var dbBookList = dao.fetchAllBooks();
+        var dbBookMap = dbBookList.stream().collect(Collectors.toMap(Book::getId, Function.identity()));
 
         try (var bais = new ByteArrayInputStream(spreadsheet)) {
+
             var wb = new XSSFWorkbook(bais);
             var sheet = wb.getSheet(SHEET_NAME);
             for (var poiRow : sheet) {
 
-                var row = new AssetRow((XSSFRow) poiRow);
+                System.out.println("row " + poiRow.getRowNum());
+
+                var row = new BookRow((XSSFRow) poiRow);
 
                 // skip the header row and blank rows
                 if (row.isHeader() || row.isBlank()) {
+                    System.out.println("skipping");
                     continue;
                 }
 
-                // if the asset in this row matches the asset with the same ID from the database, no changes are necessary
-                var ssAsset = createAssetFromSpreadsheet(row);
-                var dbAsset = dbAssetMap.get(ssAsset.getId());
-                if (ssAsset.equals(dbAsset)) {
-                    System.out.println(String.format("assets match, no update necessary: id %d, title %s", ssAsset.getId(), ssAsset.getEbookS3ObjectKey()));
+                // if the book in this row matches the book with the same ID from the database, no changes are necessary
+                var ssBook = createBookFromSpreadsheet(row);
+                var dbBook = dbBookMap.get(ssBook.getId());
+                if (ssBook.equals(dbBook)) {
+                    System.out.println(String.format("books match, no update necessary: id %d, title %s", ssBook.getId(), ssBook.getEpubObjectKey()));
                 }
 
-                // the assets don't match; some inserting/updating is required
+                // the books don't match; some inserting/updating is required
                 else {
-                    // if the asset doesn't exist in the database then insert it
-                    if (dbAsset == null) {
-                        System.out.println(String.format("new asset, inserting: title %s", ssAsset.getEbookS3ObjectKey()));
-                        dao.insertAsset(ssAsset);
+                    // if the book doesn't exist in the database then insert it
+                    if (dbBook == null) {
+                        System.out.println(String.format("new book, inserting: title %s", ssBook.getEpubObjectKey()));
+                        dao.insertBook(ssBook);
                     }
 
-                    // the asset does exist; something needs to be updated
+                    // the book does exist; something needs to be updated
                     else {
 
                         // start by seeing if the tags differ
-                        var ssTags = ssAsset.getTags();
-                        var dbTags = dbAsset.getTags();
+                        var ssTags = ssBook.getTags();
+                        var dbTags = dbBook.getTags();
                         if (!Utils.objectsAreEqual(ssTags, dbTags)) {
-                            System.out.println(String.format("assets tags differ, setting new tags: id %d, title %s", ssAsset.getId(), ssAsset.getEbookS3ObjectKey()));
-                            dao.setTags(ssAsset.getId(), ssTags);
-                            dbAsset.setTags(ssTags);
+                            System.out.println(String.format("book tags differ, setting new tags: id %d, title %s", ssBook.getId(), ssBook.getEpubObjectKey()));
+                            dao.setTags(ssBook.getId(), ssTags);
+                            dbBook.setTags(ssTags);
                         }
 
-                        // now that we've updated the tags, do we need to update the asset itself?
-                        if (!ssAsset.equals(dbAsset)) {
-                            System.out.println(String.format("assets metadata differs, updating: id %d, title %s", ssAsset.getId(), ssAsset.getEbookS3ObjectKey()));
-                            dao.updateAsset(ssAsset);
+                        // now that we've updated the tags, do we need to update the book itself?
+                        if (!ssBook.equals(dbBook)) {
+                            System.out.println(String.format("book metadata differs, updating: id %d, title %s", ssBook.getId(), ssBook.getEpubObjectKey()));
+                            dao.updateBook(ssBook);
                         }
                     }
                 }
@@ -93,41 +97,42 @@ public class SpreadsheetService {
         }
     }
 
-    protected static Asset createAssetFromSpreadsheet(AssetRow row) {
+    protected static Book createBookFromSpreadsheet(BookRow row) {
 
-        var asset = new Asset();
-        asset.setId(row.getIntValue(Column.DBID));
-        asset.setTitle(row.getStringValue(Column.TITLE));
-        asset.setAuthor(row.getStringValue(Column.AUTHOR));
-        asset.setAuthor2(row.getStringValue(Column.AUTHOR2));
-        asset.setAuthor3(row.getStringValue(Column.AUTHOR3));
-        asset.setPublicationYear(row.getIntValue(Column.PUB_YEAR));
+        var book = new Book();
+        book.setId(row.getIntValue(Column.DBID));
+        book.setTitle(row.getStringValue(Column.TITLE));
+        book.setAuthor(row.getStringValue(Column.AUTHOR));
+        book.setAuthor2(row.getStringValue(Column.AUTHOR2));
+        book.setAuthor3(row.getStringValue(Column.AUTHOR3));
+        book.setPublicationYear(row.getIntValue(Column.PUB_YEAR));
         String series = row.getStringValue(Column.SERIES);
         if (series != null && series.trim().length() > 0) {
-            asset.setSeries(series);
-            asset.setSeriesSequence(row.getIntValue(Column.SERIES_SEQUENCE));
+            book.setSeries(series);
+            book.setSeriesSequence(row.getIntValue(Column.SERIES_SEQUENCE));
         }
-        asset.setAcquisitionDate(row.getDateValue(Column.ACQ_DATE));
-        asset.setAltTitle1(row.getStringValue(Column.ALT_TITLE1));
-        asset.setAltTitle2(row.getStringValue(Column.ALT_TITLE2));
-        asset.setEbookS3ObjectKey(row.getStringValue(Column.EBOOK_S3_OBJ_KEY));
-        asset.setAudiobookS3ObjectKey(row.getStringValue(Column.AUDIOBOOK_S3_OBJ_KEY));
-        asset.setAmazonId(row.getStringValue(Column.ASIN));
+        book.setAcquisitionDate(row.getDateValue(Column.ACQ_DATE));
+        book.setAltTitle1(row.getStringValue(Column.ALT_TITLE1));
+        book.setAltTitle2(row.getStringValue(Column.ALT_TITLE2));
+        book.setEpubObjectKey(row.getStringValue(Column.EPUB_OBJ_KEY));
+        book.setMobiObjectKey(row.getStringValue(Column.MOBI_OBJ_KEY));
+        book.setAudiobookObjectKey(row.getStringValue(Column.AUDIOBOOK_OBJ_KEY));
+        book.setAmazonId(row.getStringValue(Column.ASIN));
 
-        // split the comma-separated tags and add them to the asset's list individually
+        // split the comma-separated tags and add them to the book's list individually
         String tagCSV = row.getStringValue(Column.TAGS);
         if (tagCSV != null && tagCSV.trim().length() > 0) {
             var tagArray = tagCSV.split(",");
             for (var tag : tagArray) {
-                asset.addTag(tag.trim());
+                book.addTag(tag.trim());
             }
         }
 
-        return asset;
+        return book;
     }
 
     public byte[] download() throws IOException {
-        var assets = dao.fetchAllAssets();
+        var books = dao.fetchAllBooks();
         var objects = osao.listObjects();
         var dbEbooks = new LinkedList<String>();
         var dbAudiobooks = new LinkedList<String>();
@@ -158,24 +163,24 @@ public class SpreadsheetService {
             cell.setCellStyle(style);
         }
 
-        // write each asset that we found in the database
+        // write each book that we found in the database to the spreadsheet
         int rowNum = 1;
-        for (var asset : assets) {
-            writeAssetToSpreadsheet(asset, sheet, rowNum++);
-            addToList(asset.getEbookS3ObjectKey(), dbEbooks);
-            addToList(asset.getAudiobookS3ObjectKey(), dbAudiobooks);
+        for (var book : books) {
+            writeBookToSpreadsheet(book, sheet, rowNum++);
+            addToList(book.getEpubObjectKey(), dbEbooks);
+            addToList(book.getAudiobookObjectKey(), dbAudiobooks);
         }
 
-        // what assets exist in S3 that aren't in the database?
+        // what books exist in S3 that aren't in the database?
         var newAudiobookNum = 0;
         for (var obj : objects) {
 
             // if there's an epub that's not in the database
             if (obj.toLowerCase().endsWith(".epub") && !dbEbooks.contains(obj)) {
-                var asset = new Asset();
-                asset.setEbookS3ObjectKey(obj);
-                asset.setAcquisitionDate(new Date());
-                writeAssetToSpreadsheet(asset, sheet, rowNum++);
+                var book = new Book();
+                book.setEpubObjectKey(obj);
+                book.setAcquisitionDate(new Date());
+                writeBookToSpreadsheet(book, sheet, rowNum++);
             }
 
             // if there's an audiobook that's not in the database, write its name to another sheet
@@ -204,32 +209,33 @@ public class SpreadsheetService {
         }
     }
 
-    protected void writeAssetToSpreadsheet(Asset asset, XSSFSheet sheet, int rowNum) {
-        var row = new AssetRow(sheet.createRow(rowNum));
-        row.setValue(Column.DBID, asset.getId());
-        row.setValue(Column.TITLE, asset.getTitle());
-        row.setValue(Column.AUTHOR, asset.getAuthor());
-        row.setValue(Column.AUTHOR2, asset.getAuthor2());
-        row.setValue(Column.AUTHOR3, asset.getAuthor3());
-        var pubYear = asset.getPublicationYear();
+    protected void writeBookToSpreadsheet(Book book, XSSFSheet sheet, int rowNum) {
+        var row = new BookRow(sheet.createRow(rowNum));
+        row.setValue(Column.DBID, book.getId());
+        row.setValue(Column.TITLE, book.getTitle());
+        row.setValue(Column.AUTHOR, book.getAuthor());
+        row.setValue(Column.AUTHOR2, book.getAuthor2());
+        row.setValue(Column.AUTHOR3, book.getAuthor3());
+        var pubYear = book.getPublicationYear();
         if (pubYear != null) {
             row.setValue(Column.PUB_YEAR, pubYear);
         }
-        var series = asset.getSeries();
+        var series = book.getSeries();
         if (series != null && series.trim().length() > 0) {
-            row.setValue(Column.SERIES, asset.getSeries());
-            row.setValue(Column.SERIES_SEQUENCE, asset.getSeriesSequence());
+            row.setValue(Column.SERIES, book.getSeries());
+            row.setValue(Column.SERIES_SEQUENCE, book.getSeriesSequence());
         }
-        row.setValue(Column.ACQ_DATE, asset.getAcquisitionDate());
-        row.setValue(Column.ALT_TITLE1, asset.getAltTitle1());
-        row.setValue(Column.ALT_TITLE2, asset.getAltTitle2());
-        row.setValue(Column.EBOOK_S3_OBJ_KEY, asset.getEbookS3ObjectKey());
-        row.setValue(Column.AUDIOBOOK_S3_OBJ_KEY, asset.getAudiobookS3ObjectKey());
-        var tags = asset.getTags();
+        row.setValue(Column.ACQ_DATE, book.getAcquisitionDate());
+        row.setValue(Column.ALT_TITLE1, book.getAltTitle1());
+        row.setValue(Column.ALT_TITLE2, book.getAltTitle2());
+        row.setValue(Column.EPUB_OBJ_KEY, book.getEpubObjectKey());
+        row.setValue(Column.MOBI_OBJ_KEY, book.getMobiObjectKey());
+        row.setValue(Column.AUDIOBOOK_OBJ_KEY, book.getAudiobookObjectKey());
+        var tags = book.getTags();
         if (tags != null) {
-            row.setValue(Column.TAGS, String.join(", ", asset.getTags()));
+            row.setValue(Column.TAGS, String.join(", ", book.getTags()));
         }
-        row.setValue(Column.ASIN, asset.getAmazonId());
+        row.setValue(Column.ASIN, book.getAmazonId());
     }
 
     static byte[] bytesForWorkbook(XSSFWorkbook wb) throws IOException {
@@ -244,9 +250,9 @@ public class SpreadsheetService {
         return bytes;
     }
 
-    static class AssetRow {
+    static class BookRow {
         private XSSFRow row;
-        public AssetRow(XSSFRow row) {
+        public BookRow(XSSFRow row) {
             this.row = row;
         }
 
@@ -261,7 +267,14 @@ public class SpreadsheetService {
 
         protected String getStringValue(Column column) {
             var cell = row.getCell(column.getNumber());
-            return cell == null ? null : cell.getStringCellValue();
+            if (cell == null) {
+                return null;
+            }
+            var stringValue = cell.getStringCellValue();
+            if (stringValue == null || stringValue.trim().length() == 0) {
+                return null;
+            }
+            return stringValue;
         }
 
         protected void setValue(Column column, String value) {
@@ -292,13 +305,25 @@ public class SpreadsheetService {
             if (row == null) {
                 return true;
             }
-            if (row.getLastCellNum() <= 0) {
+
+            // get the first and last cell numbers; these are zero-based indices
+            var firstCellNum = row.getFirstCellNum();
+            var lastCellNum = row.getLastCellNum(); // this is the last cell index PLUS ONE
+
+            // if there are no cells, the row is blank
+            if (lastCellNum <= 0) {
                 return true;
             }
-            for (int cellNum = row.getFirstCellNum(); cellNum < row.getLastCellNum(); cellNum++) {
+
+            // for each cell
+            for (int cellNum = firstCellNum; cellNum < lastCellNum; cellNum++) {
                 Cell cell = row.getCell(cellNum);
-                if (cell != null && cell.getCellType() != CellType.BLANK && !Utils.isBlank(cell.toString())) {
-                    return false;
+                if (cell != null && cell.getCellType() != CellType.BLANK) {
+                    var cellStr = cell.toString();
+                    // if we found something in the cell that con be converted to a non-zero length string, then the cell is not blank
+                    if (!Utils.isBlank(cellStr)) {
+                        return false;
+                    }
                 }
             }
             return true;
@@ -317,10 +342,11 @@ public class SpreadsheetService {
         ACQ_DATE(8, "Acq Date"),
         ALT_TITLE1(9, "Alt Title 1"),
         ALT_TITLE2(10, "Alt Title 2"),
-        EBOOK_S3_OBJ_KEY(11, "Ebook Object Key"),
-        AUDIOBOOK_S3_OBJ_KEY(12, "Audiobook Object Key"),
-        TAGS(13, "Tags"),
-        ASIN(14, "ASIN");
+        EPUB_OBJ_KEY(11, "Epub Object Key"),
+        MOBI_OBJ_KEY(12, "Mobi Object Key"),
+        AUDIOBOOK_OBJ_KEY(13, "Audiobook Object Key"),
+        TAGS(14, "Tags"),
+        ASIN(15, "ASIN");
 
         private int number;
         private String header;

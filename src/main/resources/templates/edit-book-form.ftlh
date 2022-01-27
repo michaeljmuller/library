@@ -110,18 +110,18 @@
 </#macro>
 
 <@c.page title="Edit Book" additionalHeadContent=hdr>
-    <form action="/metadata/book/${asset.id}" method="post">
+    <form action="/metadata/book/${book.id}" method="post">
         <table id="fieldTable">
-            <@textField name="title" label="Title" initialValue="${asset.title!}" id="titleField" autofocus=true />
-            <@textField name="altTitle1" initialValue="${asset.altTitle1!}" />
-            <@textField name="altTitle2" initialValue="${asset.altTitle2!}" />
-            <@textField name="author" label="Author" initialValue="${asset.author!}" />
-            <@textField name="author2" initialValue="${asset.author2!}" />
-            <@textField name="author3" initialValue="${asset.author3!}" />
-            <@textField name="publicationYear" label="Publication Year" initialValue="${asset.author3!}" />
-            <@textField name="series" label="Series" initialValue="${asset.series!}" />
-            <@textField name="seriesSequence" label="Series #" initialValue="${asset.seriesSequence!}" />
-            <@textField name="acquisitionDate" label="Acquisition Date" initialValue="${asset.acquisitionDate?string['MM/dd/yyyy']}" />
+            <@textField name="title" label="Title" initialValue="${book.title!}" id="titleField" autofocus=true />
+            <@textField name="altTitle1" initialValue="${book.altTitle1!}" />
+            <@textField name="altTitle2" initialValue="${book.altTitle2!}" />
+            <@textField name="author" label="Author" initialValue="${book.author!}" />
+            <@textField name="author2" initialValue="${book.author2!}" />
+            <@textField name="author3" initialValue="${book.author3!}" />
+            <@textField name="publicationYear" label="Publication Year" initialValue="${book.author3!}" />
+            <@textField name="series" label="Series" initialValue="${book.series!}" />
+            <@textField name="seriesSequence" label="Series #" initialValue="${book.seriesSequence!}" />
+            <@textField name="acquisitionDate" label="Acquisition Date" initialValue="${book.acquisitionDate?string['MM/dd/yyyy']}" />
 
             <tr>
                 <td id="tagsLabel" class="labelCell">Tags:</td>
@@ -130,7 +130,7 @@
                         <#list tagList?chunk(3) as row>
                             <tr>
                                 <#list row as tag>
-                                    <td><@checkbox name="tag-row${row?index}-col${tag?index}" value="${tag}" isChecked=asset.getTags()?seq_contains(tag) /></td>
+                                    <td><@checkbox name="tag-row${row?index}-col${tag?index}" value="${tag}" isChecked=book.getTags()?seq_contains(tag) /></td>
                                 </#list>
                             </tr>
                         </#list>
@@ -138,16 +138,16 @@
                 </td>
             </tr>
             <@textField name="newTags" label="New Tags" />
-            <@optionField name="ebookS3ObjectKey" label="EPUB Object Key" values=unattachedEpubs selectedValue=asset.ebookS3ObjectKey! />
-            <@optionField name="audiobookS3ObjectKey" label="Audiobook Object Key" values=unattachedAudiobooks selectedValue=asset.audiobookS3ObjectKey! />
-            <@textField name="asin" label="Amazon ID" initialValue="${asset.amazonId!}" />
+            <@optionField name="ebookS3ObjectKey" label="EPUB Object Key" values=unattachedEpubs selectedValue=book.ebookS3ObjectKey! />
+            <@optionField name="audiobookS3ObjectKey" label="Audiobook Object Key" values=unattachedAudiobooks selectedValue=book.audiobookS3ObjectKey! />
+            <@textField name="asin" label="Amazon ID" initialValue="${book.amazonId!}" />
             <tr>
                 <td></td>
                 <td>
                     <input class="submitButton" type="submit" value="Submit" />
                 </td>
             </tr>
-            <input type="hidden" name="assetId" value="${asset.id}" />
+            <input type="hidden" name="bookId" value="${book.id}" />
             <#if _csrf??>
                 <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
             </#if>

@@ -11,7 +11,7 @@
 
     <div class="section">Upload Metadata</div>
 
-    <form method="POST" enctype="multipart/form-data" action="/ss">
+    <form method="POST" enctype="multipart/form-data" action="/ss<#if _csrf??>?${_csrf.parameterName}=${_csrf.token}</#if>">
         <#if _csrf??>
             <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
         </#if>

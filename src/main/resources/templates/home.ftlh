@@ -7,6 +7,6 @@
     <p> -- Mike</p>
 
     <div class="section">Recently Added</div>
-    <@b.books bookList=assets></@b.books>
+    <@b.books bookList=books></@b.books>
     <div class="morebooks"><a href="/recents">More &gt;&gt;</a></div>
 </@c.page>

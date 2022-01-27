@@ -8,7 +8,7 @@
         Dropzone.autoDiscover = false;
         window.onload = function() {
             let myDropzone = new Dropzone("div#dz", {
-                url: '/asset',
+                url: '/book',
                 method: 'post',
                 chunking: true,
                 <#if _csrf??>

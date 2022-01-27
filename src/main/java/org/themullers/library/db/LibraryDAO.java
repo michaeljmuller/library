@@ -7,15 +7,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.themullers.library.Asset;
+import org.themullers.library.Book;
 import org.themullers.library.auth.pwreset.PasswordResetToken;
 import org.themullers.library.User;
 
-import java.sql.Blob;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 import java.util.*;
+import java.util.Date;
 import java.util.stream.Collectors;
 
 /**
@@ -40,9 +38,9 @@ public class LibraryDAO {
     }
 
     /**
-     * an enumeration of all the columns in the assets table
+     * an enumeration of all the columns in the books table
      */
-    enum ASSET_COLS {
+    enum BOOK_COLS {
         id,
         title,
         author,
@@ -54,31 +52,32 @@ public class LibraryDAO {
         acq_date,
         alt_title1,
         alt_title2,
-        ebook_s3_object_key,
-        audiobook_s3_object_key,
+        epub_object_key,
+        mobi_object_key,
+        audiobook_object_key,
         asin,
     }
 
     // READ-ONLY METHODS
 
     /**
-     * Returns the S3 object key for the ebook with the given asset ID.
-     * @param assetId  the database ID of the ebook
+     * Returns the S3 object key for the epub with the given book ID.
+     * @param bookId  the database ID of the ebook
      * @return  the ebook's S3 object key
      */
-    public String fetchEbookObjectKey(int assetId) {
-        String sql = "select ebook_s3_object_key from assets where id = ?";
-        return jt.queryForObject(sql, String.class, assetId);
+    public String fetchEpubObjectKey(int bookId) {
+        String sql = "select epub_object_key from books where id = ?";
+        return jt.queryForObject(sql, String.class, bookId);
     }
 
     /**
-     * Returns the S3 object key for the audiobook with the given asset ID.
-     * @param assetId  the database ID of the audiobook
+     * Returns the S3 object key for the audiobook with the given book ID.
+     * @param bookId  the database ID of the audiobook
      * @return  the audiobook's S3 object key
      */
-    public String fetchAudiobookObjectKey(int assetId) {
-        String sql = "select audiobook_s3_object_key from assets where id = ?";
-        return jt.queryForObject(sql, String.class, assetId);
+    public String fetchAudiobookObjectKey(int bookId) {
+        String sql = "select audiobook_object_key from books where id = ?";
+        return jt.queryForObject(sql, String.class, bookId);
     }
 
     /**
@@ -104,44 +103,44 @@ public class LibraryDAO {
     }
 
     /**
-     * Returns all the assets in the database.
-     * @return  list of assets
+     * Returns all the books in the database.
+     * @return  list of books
      */
-    public List<Asset> fetchAllAssets() {
-        String sql = String.format("select %s, group_concat(t.tag separator ',') as tags from assets a left outer join tags t on a.id = t.asset_id group by a.id", commaSeparated(ASSET_COLS.class, "a"));
-        return jt.query(sql, LibraryDAO::mapAsset);
+    public List<Book> fetchAllBooks() {
+        String sql = String.format("select %s, group_concat(t.tag separator ',') as tags from books a left outer join tags t on a.id = t.book_id group by a.id", commaSeparated(BOOK_COLS.class, "a"));
+        return jt.query(sql, LibraryDAO::mapBook);
     }
 
     /**
-     * Returns the asset matching a specified id
-     * @param assetId  the id to use to find the asset
-     * @return  the matching asset
+     * Returns the book matching a specified id
+     * @param bookId  the id to use to find the book
+     * @return  the matching book
      */
-    public Asset fetchAsset(int assetId) {
-        var assets = jt.query("select %s from assets where id = ? limit 1", LibraryDAO::mapAsset, assetId);
-        return assets == null || assets.size() < 1 ? null : assets.get(0);
+    public Book fetchBook(int bookId) {
+        var books = jt.query("select %s from books where id = ? limit 1", LibraryDAO::mapBook, bookId);
+        return books == null || books.size() < 1 ? null : books.get(0);
     }
 
     /**
-     * Returns all the assets written by a given author.
-     * @param author  The name of an author whose assets should be returned.
-     * @return  list of assets
+     * Returns all the books written by a given author.
+     * @param author  The name of an author whose books should be returned.
+     * @return  list of books
      */
-    public List<Asset> fetchAssetsForAuthor(String author) {
-        String sql = String.format("select %s , group_concat(t.tag separator ',') as tags from assets a left outer join tags t on a.id = t.asset_id where a.author = ? group by a.id", commaSeparated(ASSET_COLS.class, "a"));
-        return jt.query(sql, LibraryDAO::mapAsset, author);
+    public List<Book> fetchBooksForAuthor(String author) {
+        String sql = String.format("select %s , group_concat(t.tag separator ',') as tags from books a left outer join tags t on a.id = t.book_id where a.author = ? group by a.id", commaSeparated(BOOK_COLS.class, "a"));
+        return jt.query(sql, LibraryDAO::mapBook, author);
     }
 
     /**
-     * Returns the most recently acquired assets.  The result set is limited to a certain number of assets
-     * and the first few assets are skipped.
-     * @param limit  The number of assets to return.
-     * @param skip  The number of assets to skip.
-     * @return  a list of assets
+     * Returns the most recently acquired books.  The result set is limited to a certain number of books
+     * and the first few books are skipped.
+     * @param limit  The number of books to return.
+     * @param skip  The number of books to skip.
+     * @return  a list of books
      */
-    public List<Asset> fetchNewestAssets(int limit, int skip) {
-        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags from assets a left outer join tags t on a.id = t.asset_id group by a.id order by acq_date desc limit %s offset %s", commaSeparated(ASSET_COLS.class, "a"), limit, skip);
-        return jt.query(sql, LibraryDAO::mapAsset);
+    public List<Book> fetchNewestBooks(int limit, int skip) {
+        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags from books a left outer join tags t on a.id = t.book_id group by a.id order by acq_date desc limit %s offset %s", commaSeparated(BOOK_COLS.class, "a"), limit, skip);
+        return jt.query(sql, LibraryDAO::mapBook);
     }
 
     protected static User mapUser(ResultSet rs, int rowNum) throws SQLException {
@@ -158,45 +157,46 @@ public class LibraryDAO {
     }
 
     /**
-     * Populate a new asset object with information from the results of a database query.
+     * Populate a new book object with information from the results of a database query.
      * This method implements a functional interface, making it easy to use with jdbctemplate.
      * @param rs  the query's result set
      * @param rowNum  number of the row being processed
-     * @return  a new asset object containing information from the result set
+     * @return  a new book object containing information from the result set
      * @throws SQLException  thrown when an unexpected error occurs processing the result set
      */
-    protected static Asset mapAsset(ResultSet rs, int rowNum) throws SQLException {
+    protected static Book mapBook(ResultSet rs, int rowNum) throws SQLException {
 
-        var asset = new Asset();
+        var book = new Book();
 
         // read columns from the result set, write to properties of the object
-        asset.setId(getIntOrNull(rs, withTableId(ASSET_COLS.id, "a")));
-        asset.setTitle(rs.getString(withTableId(ASSET_COLS.title, "a")));
-        asset.setAuthor(rs.getString(withTableId(ASSET_COLS.author, "a")));
-        asset.setAuthor2(rs.getString(withTableId(ASSET_COLS.author2, "a")));
-        asset.setAuthor3(rs.getString(withTableId(ASSET_COLS.author3, "a")));
-        asset.setPublicationYear(rs.getInt(withTableId(ASSET_COLS.pub_year, "a")));
-        asset.setSeries(rs.getString(withTableId(ASSET_COLS.series, "a")));
-        asset.setSeriesSequence(getIntOrNull(rs, withTableId(ASSET_COLS.series_sequence, "a")));
-        asset.setAcquisitionDate(rs.getDate(withTableId(ASSET_COLS.acq_date, "a")));
-        asset.setAltTitle1(rs.getString(withTableId(ASSET_COLS.alt_title1, "a")));
-        asset.setAltTitle2(rs.getString(withTableId(ASSET_COLS.alt_title2, "a")));
-        asset.setEbookS3ObjectKey(rs.getString(withTableId(ASSET_COLS.ebook_s3_object_key, "a")));
-        asset.setAudiobookS3ObjectKey(rs.getString(withTableId(ASSET_COLS.audiobook_s3_object_key, "a")));
-        asset.setAmazonId(rs.getString(withTableId(ASSET_COLS.asin, "a")));
+        book.setId(getIntOrNull(rs, withTableId(BOOK_COLS.id, "a")));
+        book.setTitle(rs.getString(withTableId(BOOK_COLS.title, "a")));
+        book.setAuthor(rs.getString(withTableId(BOOK_COLS.author, "a")));
+        book.setAuthor2(rs.getString(withTableId(BOOK_COLS.author2, "a")));
+        book.setAuthor3(rs.getString(withTableId(BOOK_COLS.author3, "a")));
+        book.setPublicationYear(rs.getInt(withTableId(BOOK_COLS.pub_year, "a")));
+        book.setSeries(rs.getString(withTableId(BOOK_COLS.series, "a")));
+        book.setSeriesSequence(getIntOrNull(rs, withTableId(BOOK_COLS.series_sequence, "a")));
+        book.setAcquisitionDate(rs.getDate(withTableId(BOOK_COLS.acq_date, "a")));
+        book.setAltTitle1(rs.getString(withTableId(BOOK_COLS.alt_title1, "a")));
+        book.setAltTitle2(rs.getString(withTableId(BOOK_COLS.alt_title2, "a")));
+        book.setEpubObjectKey(rs.getString(withTableId(BOOK_COLS.epub_object_key, "a")));
+        book.setMobiObjectKey(rs.getString(withTableId(BOOK_COLS.mobi_object_key, "a")));
+        book.setAudiobookObjectKey(rs.getString(withTableId(BOOK_COLS.audiobook_object_key, "a")));
+        book.setAmazonId(rs.getString(withTableId(BOOK_COLS.asin, "a")));
 
-        // if there are any tags associated with this asset
+        // if there are any tags associated with this book
         // (handle tags differently because we joined them into the result set as CSV)
         var tags = rs.getString("tags");
         if (tags != null && tags.trim().length() > 0) {
 
             // parse the comma-separated list of tags
             for (var tag : tags.split(",")) {
-                asset.addTag(tag);
+                book.addTag(tag);
             }
         }
 
-        return asset;
+        return book;
     }
 
     protected static Integer getIntOrNull(ResultSet rs, String col) throws SQLException {
@@ -206,13 +206,13 @@ public class LibraryDAO {
 
     /**
      * Returns the cover image for an ebook.
-     * @param ebookS3ObjectKey  the s3 object id of the ebook whose image should be returned
+     * @param bookId  the id of the ebook whose image should be returned
      * @return  the cover image (or null if no cover image exists for this book)
      */
-    public byte[] fetchImageForEbook(String ebookS3ObjectKey) {
+    public byte[] fetchImageForEbook(int bookId) {
         try {
-            String sql = "select bits from cover_images where ebook_s3_object_key = ?";
-            Blob blob = jt.queryForObject(sql, Blob.class, ebookS3ObjectKey);
+            String sql = "select bits from cover_images where id = ?";
+            Blob blob = jt.queryForObject(sql, Blob.class, bookId);
             return blob == null ? null : blob.getBytes(1, (int) blob.length());
         }
         catch (EmptyResultDataAccessException x) {
@@ -224,19 +224,19 @@ public class LibraryDAO {
     }
 
     /**
-     * Returns a list of all the authors with assets in the library.
+     * Returns a list of all the authors with books in the library.
      * @return  a list of authors
      */
     public List<String> fetchAllAuthors() {
-        return jt.queryForList("select distinct author from assets where author is not null order by author", String.class);
+        return jt.queryForList("select distinct author from books where author is not null order by author", String.class);
     }
 
     /**
-     * Returns a list of all the series with assets in the library.
+     * Returns a list of all the series with books in the library.
      * @return  a list of series
      */
     public List<String> fetchAllSeries() {
-        return jt.queryForList("select distinct series from assets where series is not null order by series", String.class);
+        return jt.queryForList("select distinct series from books where series is not null order by series", String.class);
     }
 
     /**
@@ -259,15 +259,19 @@ public class LibraryDAO {
     }
 
     public List<String> fetchAllEpubObjectIds() {
-        return jt.queryForList("select distinct ebook_s3_object_key from assets where ebook_s3_object_key is not null order by ebook_s3_object_key", String.class);
+        return jt.queryForList("select distinct epub_object_key from books where epub_object_key is not null order by epub_object_key", String.class);
+    }
+
+    public List<String> fetchAllMobiObjectIds() {
+        return jt.queryForList("select distinct mobi_object_key from books where mobi_object_key is not null order by mobi_object_key", String.class);
     }
 
     public List<String> fetchAllAudiobookObjectIds() {
-        return jt.queryForList("select distinct audiobook_s3_object_key from assets where audiobook_s3_object_key is not null order by audiobook_s3_object_key", String.class);
+        return jt.queryForList("select distinct audiobook_object_key from books where audiobook_object_key is not null order by audiobook_object_key", String.class);
     }
 
     /**
-     * Gets all the tags in the library and a count of the number of assets associated with each tag.
+     * Gets all the tags in the library and a count of the number of books associated with each tag.
      * @return  the tags and tag counts
      */
     public Map<String, Integer> getTags() {
@@ -275,8 +279,8 @@ public class LibraryDAO {
         // create a map of tags to populate
         var map = new LinkedHashMap<String, Integer>();
 
-        // get the number of assets associated with each tag
-        jt.query("select tag, count(*) as num_assets from tags group by tag order by tag", row -> {
+        // get the number of books associated with each tag
+        jt.query("select tag, count(*) as num_books from tags group by tag order by tag", row -> {
             map.put(row.getString(1), row.getInt(2));
         });
 
@@ -297,41 +301,42 @@ public class LibraryDAO {
     // WRITE ACCESS METHODS
 
     /**
-     * Inserts an asset into the database.
-     * @return  the id (primary key) of the new asset row
-     * @param asset  the asset to insert
+     * Inserts a book into the database.
+     * @return  the id (primary key) of the new book row
+     * @param book  the book to insert
      */
-    public int insertAsset(Asset asset) {
+    public int insertBook(Book book) {
         var keyHolder = new GeneratedKeyHolder();
-        String sql = String.format("insert into assets (%s) values (%s)", commaSeparated(ASSET_COLS.class), questionMarks(ASSET_COLS.class));
+        String sql = String.format("insert into books (%s) values (%s)", commaSeparated(BOOK_COLS.class), questionMarks(BOOK_COLS.class));
         jt.update(c -> {
-            var ps = c.prepareStatement(sql);
-            ps.setNull(1, Types.INTEGER);
-            ps.setString(2, asset.getTitle());
-            ps.setString(3, asset.getAuthor());
-            ps.setString(4, asset.getAuthor2());
-            ps.setString(5, asset.getAuthor3());
-            ps.setInt(6, asset.getPublicationYear());
-            ps.setString(7, asset.getSeries());
-            ps.setInt(8, asset.getSeriesSequence());
-            ps.setDate(9, toSqlDate(asset.getAcquisitionDate()));
-            ps.setString(10, asset.getAltTitle1());
-            ps.setString(11, asset.getAltTitle2());
-            ps.setString(12, asset.getEbookS3ObjectKey());
-            ps.setString(13, asset.getAudiobookS3ObjectKey());
-            ps.setString(14, asset.getAmazonId());
+            var ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            ps.setObject(1, book.getId());
+            ps.setString(2, book.getTitle());
+            ps.setString(3, book.getAuthor());
+            ps.setString(4, book.getAuthor2());
+            ps.setString(5, book.getAuthor3());
+            ps.setInt(6, book.getPublicationYear());
+            ps.setString(7, book.getSeries());
+            ps.setObject(8, book.getSeriesSequence());
+            ps.setDate(9, toSqlDate(book.getAcquisitionDate()));
+            ps.setString(10, book.getAltTitle1());
+            ps.setString(11, book.getAltTitle2());
+            ps.setString(12, book.getEpubObjectKey());
+            ps.setString(13, book.getMobiObjectKey());
+            ps.setString(14, book.getAudiobookObjectKey());
+            ps.setString(15, book.getAmazonId());
             return ps;
         }, keyHolder);
 
-        // get the id of the newly-created asset row
-        var assetId = keyHolder.getKey().intValue();
+        // get the id of the newly-created book row
+        var bookId = keyHolder.getKey().intValue();
 
-        // insert the asset's tags
-        for (var tag : asset.getTags()) {
-            jt.update("insert into tags(asset_id, tag) values (?, ?)", assetId, tag);
+        // insert the book's tags
+        for (var tag : book.getTags()) {
+            jt.update("insert into tags(book_id, tag) values (?, ?)", bookId, tag);
         }
 
-        return assetId;
+        return bookId;
     }
 
     protected java.sql.Date toSqlDate(Date date) {
@@ -350,23 +355,23 @@ public class LibraryDAO {
     }
 
     /**
-     * Sets the tags associated with an asset.
-     * @param assetId  the asset whose tags are to be defined
-     * @param tags  the tags to associate with the asset
+     * Sets the tags associated with an book.
+     * @param bookId  the book whose tags are to be defined
+     * @param tags  the tags to associate with the book
      */
-    public void setTags(int assetId, Collection<String> tags) {
-        jt.update("delete from tags where asset_id = ?", assetId);
+    public void setTags(int bookId, Collection<String> tags) {
+        jt.update("delete from tags where book_id = ?", bookId);
         for (var tag : tags) {
-            jt.update("insert into tags(asset_id, tag) values (?, ?)", assetId, tag);
+            jt.update("insert into tags(book_id, tag) values (?, ?)", bookId, tag);
         }
     }
 
-    public void updateAsset(Asset asset) {
-        var sql = String.format("update assets set %s where id = ?", updateSql(ASSET_COLS.class));
-        jt.update(sql, asset.getId(), asset.getTitle(), asset.getAuthor(), asset.getAuthor2(), asset.getAuthor3(),
-                asset.getPublicationYear(), asset.getSeries(), asset.getSeriesSequence(), asset.getAcquisitionDate(),
-                asset.getAltTitle1(), asset.getAltTitle2(), asset.getEbookS3ObjectKey(), asset.getAudiobookS3ObjectKey(),
-                asset.getAmazonId(), asset.getId());
+    public void updateBook(Book book) {
+        var sql = String.format("update books set %s where id = ?", updateSql(BOOK_COLS.class));
+        jt.update(sql, book.getId(), book.getTitle(), book.getAuthor(), book.getAuthor2(), book.getAuthor3(),
+                book.getPublicationYear(), book.getSeries(), book.getSeriesSequence(), book.getAcquisitionDate(),
+                book.getAltTitle1(), book.getAltTitle2(), book.getEpubObjectKey(), book.getMobiObjectKey(),
+                book.getAudiobookObjectKey(), book.getAmazonId(), book.getId());
     }
 
     public void storePasswordResetToken(int userId, String token) {
@@ -428,7 +433,7 @@ public class LibraryDAO {
 
     /**
      * Pre-pends a table id to an enumeration value with a period delimiter.
-     * ASSET_COL.id, for example, would yield "a.id" given a table id of "a".
+     * BOOK_COL.id, for example, would yield "a.id" given a table id of "a".
      *
      * @param e  An enumeration value.
      * @param tableId  A table identifier
