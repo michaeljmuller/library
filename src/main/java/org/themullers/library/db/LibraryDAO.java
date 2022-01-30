@@ -117,7 +117,8 @@ public class LibraryDAO {
      * @return  the matching book
      */
     public Book fetchBook(int bookId) {
-        var books = jt.query("select %s from books where id = ? limit 1", LibraryDAO::mapBook, bookId);
+        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags from books a left outer join tags t on a.id = t.book_id where a.id = ? limit 1", commaSeparated(BOOK_COLS.class, "a"));
+        var books = jt.query(sql, LibraryDAO::mapBook, bookId);
         return books == null || books.size() < 1 ? null : books.get(0);
     }
 

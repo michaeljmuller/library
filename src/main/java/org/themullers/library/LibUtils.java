@@ -1,6 +1,7 @@
 package org.themullers.library;
 
 import com.amazonaws.services.s3.model.S3Object;
+import org.springframework.stereotype.Component;
 import org.themullers.library.db.LibraryDAO;
 import org.themullers.library.s3.LibraryOSAO;
 
@@ -10,12 +11,19 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
+@Component
 public class LibUtils {
 
     public final static String STANDALONE = "Standalone";
+
+    LibraryDAO dao;
+    LibraryOSAO osao;
+
+    public LibUtils(LibraryDAO dao, LibraryOSAO osao) {
+        this.dao = dao;
+        this.osao = osao;
+    }
 
     /**
      * Groups a list of books by the series those books are associated with;
@@ -33,7 +41,7 @@ public class LibUtils {
      * @param books The books to organize
      * @return  A map of books grouped by series.
      */
-    public static Map<String, List<Book>> groupBooksBySeries(List<Book> books) {
+    public Map<String, List<Book>> groupBooksBySeries(List<Book> books) {
 
         // start by sorting the provided books by their publication year
         books.sort((Book a, Book b) -> a.getPublicationYear() - b.getPublicationYear());
@@ -57,17 +65,13 @@ public class LibUtils {
         return groupedBooks;
     }
 
-    public static Map<Integer, Book> indexBooksById(List<Book> books) {
-        return books.stream().collect(Collectors.toMap(Book::getId, Function.identity()));
-    }
-
     /**
      * determine a file's mime type based on its extension
      *
      * @param filename a filename
      * @return the mime type
      */
-    public static String mimeTypeForFile(String filename) {
+    public String mimeTypeForFile(String filename) {
         if (filename.toLowerCase().endsWith(".epub")) {
             return "application/epub+zip";
         } else if (filename.toLowerCase().endsWith(".m4b")) {
@@ -77,7 +81,6 @@ public class LibUtils {
         throw new RuntimeException("can't determine mime type for file " + filename);
     }
 
-
     /**
      * Writes an S3 object to an HTTP response object
      *
@@ -85,7 +88,7 @@ public class LibUtils {
      * @param response the HTTP response object to write to
      * @throws IOException thrown if an unexpected error occurs writing to the response
      */
-    public static void writeS3ObjectToResponse(S3Object obj, HttpServletResponse response) throws IOException {
+    public void writeS3ObjectToResponse(S3Object obj, HttpServletResponse response) throws IOException {
 
         // escape any quotation marks in the filename with a backslash
         var filename = obj.getKey();
@@ -98,7 +101,7 @@ public class LibUtils {
         var contentLength = Math.toIntExact(obj.getObjectMetadata().getContentLength());
 
         // figure out a mime type based on the file's extension
-        var mimeType = LibUtils.mimeTypeForFile(filename);
+        var mimeType = mimeTypeForFile(filename);
 
         // write the S3 object info to the response
         response.setContentLength(contentLength);
@@ -108,7 +111,7 @@ public class LibUtils {
         response.flushBuffer();
     }
 
-    public static List<String> unattachedObjectIds(LibraryDAO dao, LibraryOSAO osao) {
+    public List<String> fetchUnattachedObjectIds() {
 
         var unattachedObjectIds = new LinkedList<String>();
 
@@ -130,4 +133,5 @@ public class LibUtils {
 
         return unattachedObjectIds;
     }
+
 }

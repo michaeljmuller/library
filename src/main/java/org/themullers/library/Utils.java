@@ -1,9 +1,14 @@
 package org.themullers.library;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public class Utils {
 
@@ -36,5 +41,35 @@ public class Utils {
                 + "[^-][A-Za-z0-9\\+-]+(\\.[A-Za-z0-9\\+-]+)*(\\.[A-Za-z]{2,})$";
         var pattern = Pattern.compile(emailRegex);
         return pattern.matcher(email).matches();
+    }
+
+    public static Map<String, byte[]> unzip(InputStream is) throws IOException {
+
+        var map = new HashMap<String, byte[]>();
+
+        // open the zip
+        try (var zis = new ZipInputStream(is)) {
+            ZipEntry entry;
+
+            // add each entry to the map
+            while ((entry = zis.getNextEntry()) != null) {
+                map.put(entry.getName(), zis.readAllBytes());
+            }
+        }
+
+        return map;
+    }
+
+    public static String getExtension(String filename) {
+        if (filename == null) {
+            return "";
+        }
+
+        var dotPos = filename.lastIndexOf(".");
+        if (dotPos < 0) {
+            return "";
+        }
+
+        return filename.substring(dotPos + 1, filename.length()).toLowerCase();
     }
 }

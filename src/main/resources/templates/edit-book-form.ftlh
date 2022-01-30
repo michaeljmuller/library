@@ -3,72 +3,39 @@
 <#-- https://tarekraafat.github.io/autoComplete.js/#/ -->
 
 <#assign hdr>
+    <#-- links to autocomplete scripts and styles -->
     <script src="https://unpkg.com/@tarekraafat/autocomplete.js@10.2.6/dist/autoComplete.min.js"></script>
-    <#--
-    <link rel="stylesheet" href="https://unpkg.com/@tarekraafat/autocomplete.js@10.2.6/dist/css/autoComplete.css">
-    -->
     <link rel="stylesheet" href="/styles/autocomplete.css">
+
+    <#-- links to dropzone scripts and styles -->
+    <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" type="text/css" />
+    <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+
+    <#-- links to page-specific scripts and styles -->
+    <script src="/javascript/edit-book.js"></script>
+    <link rel="stylesheet" href="/styles/edit-book.css">
+
     <script>
         let authors = [ <#list authorList as author>"${author}"<#sep>, </#list>];
         let series = [ <#list seriesList as series>"${series}"<#sep>, </#list>];
+        let bookId = ${book.id?c};
+
+        <#if _csrf??>
+            let csrfParameterName = "${_csrf.parameterName}";
+            let csrfToken = "${_csrf.token}";
+        <#else>
+            let csrfParameterName = null;
+            let csrfToken = null;
+        </#if>
+
+        Dropzone.autoDiscover = false;
+
         window.onload = function() {
-            const authorAutoComplete = new autoComplete({
-                selector: "#author",
-                data: {
-                    src: authors,
-                },
-                events: {
-                    input: {
-                        selection: (event) => {
-                            authorAutoComplete.input.value = event.detail.selection.value;
-                        }
-                    }
-                },
-            });
-            const seriesAutoComplete = new autoComplete({
-                selector: "#series",
-                data: {
-                    src: series,
-                },
-                events: {
-                    input: {
-                        selection: (event) => {
-                            seriesAutoComplete.input.value = event.detail.selection.value;
-                        }
-                    }
-                },
-            });
+            initializeAutocomplete("#author", authors);
+            initializeAutocomplete("#series", series);
+            initializeDropzone(bookId, csrfParameterName, csrfToken);
         }
     </script>
-    <style>
-
-        select {
-            font-size: 16px;
-        }
-
-        input[type=text] {
-            font-size: 16px;
-            padding: 2px;
-            width: 600px;
-            border-radius: 4px;
-        }
-
-        #tagsLabel {
-            vertical-align: top;
-            padding-top: 5px;
-        }
-
-        td.labelCell {
-            font-weight: bold;
-            text-align: right;
-            padding-right: 0.5em;
-        }
-
-        label.tagName {
-            padding-right: 0.5em;
-        }
-    </style>
-
 </#assign>
 
 <#macro textField name label="" initialValue="" id=name autofocus=false>
@@ -118,13 +85,13 @@
             <@textField name="author" label="Author" initialValue="${book.author!}" />
             <@textField name="author2" initialValue="${book.author2!}" />
             <@textField name="author3" initialValue="${book.author3!}" />
-            <@textField name="publicationYear" label="Publication Year" initialValue="${book.author3!}" />
+            <@textField name="publicationYear" label="Pub Year" initialValue="${book.publicationYear?c!}" />
             <@textField name="series" label="Series" initialValue="${book.series!}" />
-            <@textField name="seriesSequence" label="Series #" initialValue="${book.seriesSequence!}" />
-            <@textField name="acquisitionDate" label="Acquisition Date" initialValue="${book.acquisitionDate?string['MM/dd/yyyy']}" />
+            <@textField name="seriesSequence" label="Series #" initialValue="${book.seriesSequence?c!}" />
+            <@textField name="acquisitionDate" label="Acq Date" initialValue="${book.acquisitionDate?string['MM/dd/yyyy']}" />
 
             <tr>
-                <td id="tagsLabel" class="labelCell">Tags:</td>
+                <td class="labelCell tall">Tags:</td>
                 <td>
                     <table id="tagTable">
                         <#list tagList?chunk(3) as row>
@@ -138,9 +105,32 @@
                 </td>
             </tr>
             <@textField name="newTags" label="New Tags" />
-            <@optionField name="ebookS3ObjectKey" label="EPUB Object Key" values=unattachedEpubs selectedValue=book.ebookS3ObjectKey! />
-            <@optionField name="audiobookS3ObjectKey" label="Audiobook Object Key" values=unattachedAudiobooks selectedValue=book.audiobookS3ObjectKey! />
-            <@textField name="asin" label="Amazon ID" initialValue="${book.amazonId!}" />
+            <@optionField name="ebookS3ObjectKey" label="EPUB" values=unattachedEpubs selectedValue=book.epubObjectKey! />
+            <@optionField name="ebookS3ObjectKey" label="MOBI" values=unattachedMobis selectedValue=book.mobiObjectKey! />
+            <@optionField name="audiobookS3ObjectKey" label="Audiobook" values=unattachedAudiobooks selectedValue=book.audiobookObjectKey! />
+            <@textField name="asin" label="ASIN" initialValue="${book.amazonId!}" />
+            <tr>
+                <td class="labelCell tall">Cover Image:</td>
+                <td>
+                    <div id="coverImages">
+                        <#list bookImages as image>
+                            <div class="coverImageWrapper">
+                                <div class="coverImage">
+                                    <label for="image${image?index}">
+                                        <img src="/epubImage?objId=${book.epubObjectKey?url}&file=${image?url}" />
+                                    </label>
+                                </div>
+                                <div class="coverImageLabel">
+                                    <input type="radio" name="selectedCoverImg" id="image${image?index}"><label for="image${image?index}">${image}</label>
+                                </div>
+                            </div>
+                        </#list>
+                        <div id="dz-wrapper">
+                            <div id="dz" class="dropzone"></div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
             <tr>
                 <td></td>
                 <td>
@@ -153,4 +143,5 @@
             </#if>
         </table>
     </form>
+
 </@c.page>

@@ -1,12 +1,14 @@
 package org.themullers.library.web;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
-import org.themullers.library.Book;
+import org.themullers.library.BookImageCache;
 import org.themullers.library.LibUtils;
 import org.themullers.library.SpreadsheetService;
 import org.themullers.library.Utils;
@@ -14,10 +16,10 @@ import org.themullers.library.db.LibraryDAO;
 import org.themullers.library.s3.LibraryOSAO;
 
 import javax.servlet.http.HttpServletResponse;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.Date;
 import java.util.stream.Collectors;
 
 @RestController
@@ -26,12 +28,16 @@ public class LibraryController {
     LibraryDAO dao;
     LibraryOSAO osao;
     SpreadsheetService ss;
+    LibUtils libUtils;
+    BookImageCache bookImageCache;
 
     @Autowired
-    public LibraryController(LibraryDAO dao, LibraryOSAO osao, SpreadsheetService ss) {
+    public LibraryController(LibraryDAO dao, LibraryOSAO osao, SpreadsheetService ss, LibUtils libUtils, BookImageCache bookImageCache) {
         this.dao = dao;
         this.osao = osao;
         this.ss = ss;
+        this.libUtils = libUtils;
+        this.bookImageCache = bookImageCache;
     }
 
     /**
@@ -76,7 +82,7 @@ public class LibraryController {
 
         // get the books, group them by series, and then pull out the stand-alone books to be handled uniquely
         var books = dao.fetchBooksForAuthor(author);
-        var groupedBooks = LibUtils.groupBooksBySeries(books);
+        var groupedBooks = libUtils.groupBooksBySeries(books);
         var standalone = groupedBooks.remove(LibUtils.STANDALONE);
 
         // build the model
@@ -193,14 +199,14 @@ public class LibraryController {
     public void getEbook(@RequestParam(value = "bookId") int bookId, HttpServletResponse response) throws IOException {
         var id = dao.fetchEpubObjectKey(bookId);
         var obj = osao.readObject(id);
-        LibUtils.writeS3ObjectToResponse(obj, response);
+        libUtils.writeS3ObjectToResponse(obj, response);
     }
 
     @GetMapping(value = "/audiobook", produces = "application/epub+zip")
     public void getAudiobook(@RequestParam(value = "bookId") int bookId, HttpServletResponse response) throws IOException {
         var id = dao.fetchAudiobookObjectKey(bookId);
         var obj = osao.readObject(id);
-        LibUtils.writeS3ObjectToResponse(obj, response);
+        libUtils.writeS3ObjectToResponse(obj, response);
     }
 
     @GetMapping(value="/asset")
@@ -214,21 +220,28 @@ public class LibraryController {
         osao.uploadObject(file.getInputStream(), file.getSize(), file.getOriginalFilename());
     }
 
+    @PostMapping(value="/uploadCover")
+    public void receiveCoverImage(@RequestParam("file") MultipartFile file, @RequestParam("bookId") int bookId) throws IOException {
+        bookImageCache.cacheUploadedCoverForBook(file.getOriginalFilename(), file.getInputStream(), bookId);
+    }
+
     @GetMapping("/forms/editbook/{id}")
-    public ModelAndView displayEditBookForm(@PathVariable("id") int bookId) {
+    public ModelAndView displayEditBookForm(@PathVariable("id") int bookId) throws IOException {
 
         var mv = new LibraryModelAndView("/edit-book-form");
 
         // fetch the book to edit using the id from the URL
+        var book = dao.fetchBook(bookId);
+        /*
         var book = new Book(); book.setId(bookId);
         book.setTitle("the title of the book");
         book.addTag("Humor");
         book.addTag("First Contact");
         book.setAcquisitionDate(new Date());
-        //mv.addObject("book", dao.fetchBook(bookId));
+        */
 
         // get lists of object ids of each type that are not currently attached to any books in the database
-        var objIds = LibUtils.unattachedObjectIds(dao, osao);
+        var objIds = libUtils.fetchUnattachedObjectIds();
         var epubs = objIds.stream().filter(o -> o.toLowerCase().endsWith("epub")).collect(Collectors.toList());
         var mobis = objIds.stream().filter(o -> o.toLowerCase().endsWith("mobi")).collect(Collectors.toList());
         var audiobooks = objIds.stream().filter(o -> o.toLowerCase().endsWith("m4b")).collect(Collectors.toList());
@@ -240,21 +253,43 @@ public class LibraryController {
             Collections.sort(epubs);
         }
 
-        // if there is an audiobook already attched to this book, add it to the list
+        // if there is an audiobook already attached to this book, add it to the list
         var audiobook = book.getAudiobookObjectKey();
         if (audiobook != null) {
             audiobooks.add(audiobook);
             Collections.sort(audiobooks);
         }
 
-        mv.addObject("book", book);
+        mv.addObject("book", dao.fetchBook(bookId));
         mv.addObject("authorList", dao.fetchAllAuthors());
         mv.addObject("seriesList", dao.fetchAllSeries());
         mv.addObject("tagList", dao.fetchAllTags());
         mv.addObject("unattachedEpubs", epubs);
         mv.addObject("unattachedMobis", mobis);
         mv.addObject("unattachedAudiobooks", audiobooks);
+        mv.addObject("bookImages", bookImageCache.imagesFromBook(book.getEpubObjectKey()));
         return mv;
+    }
+
+    /**
+     * Gets candidate images for an ebook.
+     */
+    @GetMapping("/coverImages")
+    public ModelAndView displayCoverImagesForBook(@RequestParam("epubObjId") String epubObjId) throws IOException {
+        var mv = new LibraryModelAndView("/cover-images-div");
+        mv.addObject("images", bookImageCache.imagesFromBook(epubObjId));
+        mv.addObject("epubObjId", epubObjId);
+        return mv;
+    }
+
+    @GetMapping("/epubImage")
+    public Resource getImageFromBook(@RequestParam("objId") String epubObjId, @RequestParam("file") String filename) throws FileNotFoundException {
+        return new InputStreamResource(new FileInputStream(bookImageCache.getBookImageFromCache(epubObjId, filename)));
+    }
+
+    @GetMapping(value="/uploadedImage")
+    public Resource getUploadedImage(@RequestParam("bookId") int bookId, @RequestParam("file") String filename) throws FileNotFoundException {
+        return new InputStreamResource(new FileInputStream(bookImageCache.getUploadedBookFromCache(bookId, filename)));
     }
 
     /**

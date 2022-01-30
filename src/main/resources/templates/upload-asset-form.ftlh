@@ -24,5 +24,5 @@
 </#assign>
 
 <@c.page title="Upload Asset" additionalHeadContent=hdr>
-    <div id="dz"class="dropzone"></div>
+    <div id="dz" class="dropzone"></div>
 </@c.page>
