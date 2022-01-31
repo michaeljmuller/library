@@ -76,8 +76,30 @@
     </tr>
 </#macro>
 
+<#macro coverImage index label url>
+    <div class="coverImageWrapper">
+        <div class="coverImage">
+            <label for="image${index}">
+                <img src="${url}" />
+            </label>
+        </div>
+        <div class="coverImageLabel">
+            <input type="radio" name="selectedCoverImg" id="image${index}"><label for="image${index}">${label}</label>
+        </div>
+    </div>
+</#macro>
+
 <@c.page title="Edit Book" additionalHeadContent=hdr>
-    <form action="/metadata/book/${book.id}" method="post">
+
+    <#if msg?? >
+        <div class="message">${msg}</div>
+    </#if>
+
+    <form action="/forms/editbook/${book.id?c}" method="post">
+        <input type="hidden" name="bookId" value="${book.id?c}" />
+        <#if _csrf??>
+            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
+        </#if>
         <table id="fieldTable">
             <@textField name="title" label="Title" initialValue="${book.title!}" id="titleField" autofocus=true />
             <@textField name="altTitle1" initialValue="${book.altTitle1!}" />
@@ -85,10 +107,10 @@
             <@textField name="author" label="Author" initialValue="${book.author!}" />
             <@textField name="author2" initialValue="${book.author2!}" />
             <@textField name="author3" initialValue="${book.author3!}" />
-            <@textField name="publicationYear" label="Pub Year" initialValue="${book.publicationYear?c!}" />
+            <@textField name="publicationYear" label="Pub Year" initialValue="${(book.publicationYear?c)!}" />
             <@textField name="series" label="Series" initialValue="${book.series!}" />
-            <@textField name="seriesSequence" label="Series #" initialValue="${book.seriesSequence?c!}" />
-            <@textField name="acquisitionDate" label="Acq Date" initialValue="${book.acquisitionDate?string['MM/dd/yyyy']}" />
+            <@textField name="seriesSequence" label="Series #" initialValue="${(book.seriesSequence?c)!}" />
+            <@textField name="acquisitionDate" label="Acq Date" initialValue="${(book.acquisitionDate?string['MM/dd/yyyy'])!}" />
 
             <tr>
                 <td class="labelCell tall">Tags:</td>
@@ -113,17 +135,13 @@
                 <td class="labelCell tall">Cover Image:</td>
                 <td>
                     <div id="coverImages">
+                        <#if hasCoverImage>
+                            <#assign url = "/cover?book=" + book.id?c >
+                            <@coverImage 999 "Existing Cover" url />
+                        </#if>
                         <#list bookImages as image>
-                            <div class="coverImageWrapper">
-                                <div class="coverImage">
-                                    <label for="image${image?index}">
-                                        <img src="/epubImage?objId=${book.epubObjectKey?url}&file=${image?url}" />
-                                    </label>
-                                </div>
-                                <div class="coverImageLabel">
-                                    <input type="radio" name="selectedCoverImg" id="image${image?index}"><label for="image${image?index}">${image}</label>
-                                </div>
-                            </div>
+                            <#assign url = "/epubImage?objId=" + book.epubObjectKey?url + "&file=" + image?url >
+                            <@coverImage image?index image url />
                         </#list>
                         <div id="dz-wrapper">
                             <div id="dz" class="dropzone"></div>
@@ -137,10 +155,6 @@
                     <input class="submitButton" type="submit" value="Submit" />
                 </td>
             </tr>
-            <input type="hidden" name="bookId" value="${book.id}" />
-            <#if _csrf??>
-                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
-            </#if>
         </table>
     </form>
 

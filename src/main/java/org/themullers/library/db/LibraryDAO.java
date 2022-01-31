@@ -61,6 +61,16 @@ public class LibraryDAO {
     // READ-ONLY METHODS
 
     /**
+     * Returns a boolean indicating whether a book has a cover image uploaded.
+     *
+     * @param bookId  The book's id
+     * @return  boolean indicating whether we have a cover for that book in the DB
+     */
+    public boolean hasCoverImage(int bookId) {
+        return jt.queryForObject("select count(*) from cover_images where book_id = ?", Integer.class, bookId) > 0;
+    }
+
+    /**
      * Returns the S3 object key for the epub with the given book ID.
      * @param bookId  the database ID of the ebook
      * @return  the ebook's S3 object key
@@ -248,17 +258,6 @@ public class LibraryDAO {
         return jt.queryForList("select distinct tag from tags order by tag", String.class);
     }
 
-    /**
-     * Indicates whether a cover image exists for a given ebook.
-     * @param s3key  The s3 object key for an ebook
-     * @return  true if the cover image is found, false otherwise
-     */
-    public boolean coverImageExists(String s3key) {
-        // TODO: remove this if it's not needed
-        var count = jt.queryForObject("select count(*) from cover_images where ebook_s3_object_key = ?", Integer.class, s3key);
-        return count != null && count > 0;
-    }
-
     public List<String> fetchAllEpubObjectIds() {
         return jt.queryForList("select distinct epub_object_key from books where epub_object_key is not null order by epub_object_key", String.class);
     }
@@ -346,13 +345,13 @@ public class LibraryDAO {
 
     /**
      * Inserts a cover image into the database.
-     * @param s3key  the s3 object key for the book whose cover should be inserted
+     * @param bookId  the id (foreign key) of the book whose cover should be inserted
      * @param filename  the cover image's filename
      * @param mimeType  the mime type of the cover image
      * @param bytes  the cover image
      */
-    public void insertCoverImage(String s3key, String filename, String mimeType, byte[] bytes) {
-        jt.update("insert into cover_images (ebook_s3_object_key, filename, mime_type, bits) values (?, ?, ? , ?)", s3key, filename, mimeType, bytes);
+    public void insertCoverImage(int bookId, String filename, String mimeType, byte[] bytes) {
+        jt.update("insert into cover_images (book_id, filename, mime_type, bits) values (?, ?, ? , ?)", bookId, filename, mimeType, bytes);
     }
 
     /**

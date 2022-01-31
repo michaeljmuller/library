@@ -33,6 +33,7 @@ create table books (
 create table cover_images (
     id int not null auto_increment,
     book_id int not null,
+    filename varchar(255),
     mime_type varchar(255),
     bits mediumblob,
     FOREIGN KEY(book_id) REFERENCES books(id),

@@ -11,6 +11,7 @@ TO DO:
 - sort authors by last name
 - find a better way of handling new DB entries (than appending them to the end of metadata ss)
 - some unauthenticated dialogs have no header-window-bar-title
+- cover image download endpoint assumes JPEG
 
 DONE:
 - larger fonts for mobile

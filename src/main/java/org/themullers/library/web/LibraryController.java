@@ -8,13 +8,11 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
-import org.themullers.library.BookImageCache;
-import org.themullers.library.LibUtils;
-import org.themullers.library.SpreadsheetService;
-import org.themullers.library.Utils;
+import org.themullers.library.*;
 import org.themullers.library.db.LibraryDAO;
 import org.themullers.library.s3.LibraryOSAO;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -226,19 +224,28 @@ public class LibraryController {
     }
 
     @GetMapping("/forms/editbook/{id}")
-    public ModelAndView displayEditBookForm(@PathVariable("id") int bookId) throws IOException {
+    public ModelAndView editBookFormDisplay(@PathVariable("id") int bookId) throws IOException {
+        var mv = new LibraryModelAndView("/edit-book-form");
+        populateEditBookPageModel(mv, dao.fetchBook(bookId));
+        return mv;
+    }
+
+    @PostMapping("/forms/editbook/{id}")
+    public ModelAndView editBookFormHandleSubmission(@PathVariable("id") int bookId, HttpServletRequest req) throws IOException {
+
+        var book = new Book();
+        book.setId(bookId);
+
+        var dbBook = dao.fetchBook(bookId);
+        var msg = book.equals(dbBook) ? "books match!" : "books don't match :(";
 
         var mv = new LibraryModelAndView("/edit-book-form");
+        populateEditBookPageModel(mv, book);
+        mv.addObject("msg", msg);
+        return mv;
+    }
 
-        // fetch the book to edit using the id from the URL
-        var book = dao.fetchBook(bookId);
-        /*
-        var book = new Book(); book.setId(bookId);
-        book.setTitle("the title of the book");
-        book.addTag("Humor");
-        book.addTag("First Contact");
-        book.setAcquisitionDate(new Date());
-        */
+    protected void populateEditBookPageModel(ModelAndView mv, Book book) throws IOException {
 
         // get lists of object ids of each type that are not currently attached to any books in the database
         var objIds = libUtils.fetchUnattachedObjectIds();
@@ -260,7 +267,7 @@ public class LibraryController {
             Collections.sort(audiobooks);
         }
 
-        mv.addObject("book", dao.fetchBook(bookId));
+        mv.addObject("book", book);
         mv.addObject("authorList", dao.fetchAllAuthors());
         mv.addObject("seriesList", dao.fetchAllSeries());
         mv.addObject("tagList", dao.fetchAllTags());
@@ -268,7 +275,13 @@ public class LibraryController {
         mv.addObject("unattachedMobis", mobis);
         mv.addObject("unattachedAudiobooks", audiobooks);
         mv.addObject("bookImages", bookImageCache.imagesFromBook(book.getEpubObjectKey()));
-        return mv;
+        mv.addObject("hasCoverImage", dao.hasCoverImage(book.getId()));
+    }
+
+
+    protected String getParameter(HttpServletRequest req, String name) {
+        var value = req.getParameter(name);
+        return Utils.isBlank(value) ? null : value.trim();
     }
 
     /**
@@ -303,5 +316,4 @@ public class LibraryController {
         // TODO
         return null;
     }
-
 }
