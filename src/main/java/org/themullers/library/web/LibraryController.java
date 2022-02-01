@@ -17,7 +17,10 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
@@ -233,16 +236,64 @@ public class LibraryController {
     @PostMapping("/forms/editbook/{id}")
     public ModelAndView editBookFormHandleSubmission(@PathVariable("id") int bookId, HttpServletRequest req) throws IOException {
 
-        var book = new Book();
-        book.setId(bookId);
+        var formData = new EditBookFormData(req);
+        var validation = formData.validate();
+
+        var formBook = validation.book();
+        formBook.setId(bookId);
+        var errors = validation.errors();
 
         var dbBook = dao.fetchBook(bookId);
-        var msg = book.equals(dbBook) ? "books match!" : "books don't match :(";
+        var msg = formBook.equals(dbBook) ? "books match!" : "books don't match :(";
+        errors.add(0, msg);
 
-        var mv = new LibraryModelAndView("/edit-book-form");
-        populateEditBookPageModel(mv, book);
-        mv.addObject("msg", msg);
-        return mv;
+        // if there are any validation errors, display them on this page
+        if (errors.size() > 0) {
+            var mv = new LibraryModelAndView("/edit-book-form");
+            populateEditBookPageModel(mv, formBook);
+            mv.addObject("errors", errors);
+            return mv;
+        }
+        else {
+            throw new RuntimeException("Not yet implemented.");
+        }
+    }
+
+    protected record EditBookFormValidation(List<String> errors, Book book) {
+    }
+
+    protected record EditBookFormData(HttpServletRequest request) implements FormData {
+        static SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+
+        public EditBookFormValidation validate() {
+            var errors = new LinkedList<String>();
+            var book = new Book();
+            book.setTitle(getString("title"));
+            book.setAltTitle1(getString("altTitle1"));
+            book.setAltTitle2(getString("altTitle2"));
+            book.setAuthor(getString("author"));
+            book.setAuthor2(getString("author2"));
+            book.setAuthor3(getString("author3"));
+            handle(() -> book.setPublicationYear(getInteger("publicationYear")), errors, "Bad publication year");
+            book.setSeries(getString("series"));
+            handle(() ->book.setSeriesSequence(getInteger("seriesSequence")), errors, "Bad format series sequence number");
+            handle(() -> book.setAcquisitionDate(getDate("acquisitionDate")), errors, "Bad format acquisition date");
+            return new EditBookFormValidation(errors, book);
+        }
+
+        private void handle(Runnable operation, List<String> errors, String msg) {
+            try {
+                operation.run();
+            }
+            catch (Exception x) {
+                errors.add(msg + " -- " + x.getMessage());
+            }
+        }
+
+        @Override
+        public SimpleDateFormat dateFormat() {
+            return dateFormat;
+        }
     }
 
     protected void populateEditBookPageModel(ModelAndView mv, Book book) throws IOException {
@@ -276,12 +327,6 @@ public class LibraryController {
         mv.addObject("unattachedAudiobooks", audiobooks);
         mv.addObject("bookImages", bookImageCache.imagesFromBook(book.getEpubObjectKey()));
         mv.addObject("hasCoverImage", dao.hasCoverImage(book.getId()));
-    }
-
-
-    protected String getParameter(HttpServletRequest req, String name) {
-        var value = req.getParameter(name);
-        return Utils.isBlank(value) ? null : value.trim();
     }
 
     /**

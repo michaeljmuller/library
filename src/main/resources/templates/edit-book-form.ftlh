@@ -91,8 +91,12 @@
 
 <@c.page title="Edit Book" additionalHeadContent=hdr>
 
-    <#if msg?? >
-        <div class="message">${msg}</div>
+    <#if errors?? >
+        <ul>
+            <#list errors as error>
+                <li>${error}</li>
+            </#list>
+        </ul>
     </#if>
 
     <form action="/forms/editbook/${book.id?c}" method="post">
