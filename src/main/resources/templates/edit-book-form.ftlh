@@ -51,9 +51,9 @@
     </tr>
 </#macro>
 
-<#macro checkbox name value isChecked id=name>
+<#macro checkbox name id value isChecked>
     <div>
-        <input type="checkbox" id="${id}" value="${value}" <#if isChecked>checked</#if> />
+        <input type="checkbox" id="${id}" name="${name}" value="${value}" <#if isChecked>checked</#if> />
         <label class="tagName" for="${id}">${value}</label>
     </div>
 </#macro>
@@ -123,7 +123,7 @@
                         <#list tagList?chunk(3) as row>
                             <tr>
                                 <#list row as tag>
-                                    <td><@checkbox name="tag-row${row?index}-col${tag?index}" value="${tag}" isChecked=book.getTags()?seq_contains(tag) /></td>
+                                    <td><@checkbox name="tags" id="tag-row${row?index}-col${tag?index}" value="${tag}" isChecked=book.getTags()?seq_contains(tag) /></td>
                                 </#list>
                             </tr>
                         </#list>
@@ -131,9 +131,9 @@
                 </td>
             </tr>
             <@textField name="newTags" label="New Tags" />
-            <@optionField name="ebookS3ObjectKey" label="EPUB" values=unattachedEpubs selectedValue=book.epubObjectKey! />
-            <@optionField name="ebookS3ObjectKey" label="MOBI" values=unattachedMobis selectedValue=book.mobiObjectKey! />
-            <@optionField name="audiobookS3ObjectKey" label="Audiobook" values=unattachedAudiobooks selectedValue=book.audiobookObjectKey! />
+            <@optionField name="epubObjectKey" label="EPUB" values=unattachedEpubs selectedValue=book.epubObjectKey! />
+            <@optionField name="mobiObjectKey" label="MOBI" values=unattachedMobis selectedValue=book.mobiObjectKey! />
+            <@optionField name="audiobookObjectKey" label="Audiobook" values=unattachedAudiobooks selectedValue=book.audiobookObjectKey! />
             <@textField name="asin" label="ASIN" initialValue="${book.amazonId!}" />
             <tr>
                 <td class="labelCell tall">Cover Image:</td>

@@ -5,7 +5,10 @@ import org.themullers.library.Utils;
 import javax.servlet.http.HttpServletRequest;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 
 public interface FormData {
     HttpServletRequest request();
@@ -29,5 +32,10 @@ public interface FormData {
         catch (ParseException x) {
             throw new RuntimeException("Date does not match format " + dateFormat(), x);
         }
+    }
+
+    default List<String> getStrings(String parameter) {
+        var values = request().getParameterValues(parameter);
+        return values == null ? new LinkedList<String>() : Arrays.asList(values);
     }
 }

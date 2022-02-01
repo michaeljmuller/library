@@ -216,8 +216,7 @@ public class LibraryController {
     }
 
     @PostMapping(value="/asset")
-    public void receiveAssetBinary(@RequestParam("file") MultipartFile file) throws FileNotFoundException, IOException {
-        var size = file.getSize();
+    public void receiveAssetBinary(@RequestParam("file") MultipartFile file) throws IOException {
         osao.uploadObject(file.getInputStream(), file.getSize(), file.getOriginalFilename());
     }
 
@@ -278,7 +277,41 @@ public class LibraryController {
             book.setSeries(getString("series"));
             handle(() ->book.setSeriesSequence(getInteger("seriesSequence")), errors, "Bad format series sequence number");
             handle(() -> book.setAcquisitionDate(getDate("acquisitionDate")), errors, "Bad format acquisition date");
+            book.setTags(getTags());
+            book.setEpubObjectKey(getString("epubObjectKey"));
+            book.setMobiObjectKey(getString("mobiObjectKey"));
+            book.setAudiobookObjectKey(getString("audiobookObjectKey"));
+            book.setAmazonId(getString("asin"));
             return new EditBookFormValidation(errors, book);
+        }
+
+        /**
+         * combine the tags from the radio boxes and the text field into one list
+         */
+        private List<String> getTags() {
+
+            // get the tags from the check boxes (make a copy so we get a mutable list)
+            var tags = new LinkedList<String>(getStrings("tags"));
+
+            // if any additional tags were specified in the text field
+            var newTagsCSV = getString("newTags");
+            if (!Utils.isBlank(newTagsCSV)) {
+
+                // for each new tag in the text area
+                var newTagsArray = newTagsCSV.split(",");
+                for (var newTag : newTagsArray) {
+
+                    // clean any white space from the tag
+                    var trimNewTag = newTag.trim();
+
+                    // if the tag isn't a duplicate of one of the checkboxes, add it to the list
+                    if (newTag.length() > 0 && !tags.contains(trimNewTag)) {
+                        tags.add(trimNewTag);
+                    }
+                }
+            }
+
+            return tags;
         }
 
         private void handle(Runnable operation, List<String> errors, String msg) {
