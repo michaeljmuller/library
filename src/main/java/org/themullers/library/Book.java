@@ -1,6 +1,9 @@
 package org.themullers.library;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * A simple Java class containing information about one of the library's books.
@@ -144,8 +147,12 @@ public class Book {
         this.amazonId = amazonId;
     }
 
-    public void addTag(String tag) {
-        tags.add(tag);
+    public void addTag(String newTag) {
+        tags.add(newTag);
+    }
+
+    public void addTags(Collection<String> newTags) {
+        tags.addAll(newTags);
     }
 
     public Collection<String> getTags() {
@@ -179,4 +186,25 @@ public class Book {
         }
     }
 
+    @Override
+    public String toString() {
+        var sb = new StringBuilder();
+        sb.append("id: ").append(id);
+        sb.append("\ntitle: ").append(title);
+        sb.append("\nauthor: ").append(author);
+        sb.append("\nauthor 2: ").append(author2);
+        sb.append("\nauthor 3: ").append(author3);
+        sb.append("\npub year: ").append(publicationYear);
+        sb.append("\nseries: ").append(series);
+        sb.append("\nseries #: ").append(seriesSequence);
+        sb.append("\nacq date: ").append(acquisitionDate);
+        sb.append("\nalt title 1: ").append(altTitle1);
+        sb.append("\nalt title 2: ").append(altTitle2);
+        sb.append("\nepub obj key: ").append(epubObjectKey);
+        sb.append("\nmobi obj key: ").append(mobiObjectKey);
+        sb.append("\naudiobook obj key: ").append(audiobookObjectKey);
+        sb.append("\nasin: ").append(amazonId);
+        sb.append("\ntags: ").append(String.join(", ", tags));
+        return sb.toString();
+    }
 }

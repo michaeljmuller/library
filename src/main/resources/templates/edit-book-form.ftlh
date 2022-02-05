@@ -18,14 +18,17 @@
     <script>
         let authors = [ <#list authorList as author>"${author}"<#sep>, </#list>];
         let series = [ <#list seriesList as series>"${series}"<#sep>, </#list>];
-        let bookId = ${book.id?c};
+        let bookId = ${(book.id!0)?c};
 
+        <#-- TODO: move this to the page macro? -->
         <#if _csrf??>
             let csrfParameterName = "${_csrf.parameterName}";
             let csrfToken = "${_csrf.token}";
+            let csrfHeaderName = "${_csrf.headerName}";
         <#else>
             let csrfParameterName = null;
             let csrfToken = null;
+            let csrfHeaderName = null;
         </#if>
 
         Dropzone.autoDiscover = false;
@@ -34,6 +37,19 @@
             initializeAutocomplete("#author", authors);
             initializeAutocomplete("#series", series);
             initializeDropzone(bookId, csrfParameterName, csrfToken);
+            convertFormToAjax("bookForm", csrfHeaderName, csrfToken, ["tags"], handleFormSubmitResponse);
+        }
+
+        function handleFormSubmitResponse(event) {
+            let response = JSON.parse(event.target.responseText);
+            if (response.isSuccess) {
+                alert("success!");
+                windows.location.href = "/addBooks";
+            }
+            else {
+                alert("failure; see messages at top of page");
+                displayErrors(response.messages, "errors");
+            }
         }
     </script>
 </#assign>
@@ -84,23 +100,25 @@
             </label>
         </div>
         <div class="coverImageLabel">
-            <input type="radio" name="selectedCoverImg" id="image${index}"><label for="image${index}">${label}</label>
+            <input type="radio" name="coverImage" value="${label}" id="image${index}"><label for="image${index}">${label}</label>
         </div>
     </div>
 </#macro>
 
 <@c.page title="Edit Book" additionalHeadContent=hdr>
 
-    <#if errors?? >
-        <ul>
+    <ul id="errors">
+        <#if errors?? >
             <#list errors as error>
                 <li>${error}</li>
             </#list>
-        </ul>
-    </#if>
+        </#if>
+    </ul>
 
-    <form action="/forms/editbook/${book.id?c}" method="post">
-        <input type="hidden" name="bookId" value="${book.id?c}" />
+    <form id="bookForm" action="${formAction}" method="post">
+        <#if book.id??><#-- consider not even passing the ID; it's in the URL for edits -->
+            <input type="hidden" name="bookId" value="${book.id?c}" />
+        </#if>
         <#if _csrf??>
             <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
         </#if>
@@ -134,7 +152,7 @@
             <@optionField name="epubObjectKey" label="EPUB" values=unattachedEpubs selectedValue=book.epubObjectKey! />
             <@optionField name="mobiObjectKey" label="MOBI" values=unattachedMobis selectedValue=book.mobiObjectKey! />
             <@optionField name="audiobookObjectKey" label="Audiobook" values=unattachedAudiobooks selectedValue=book.audiobookObjectKey! />
-            <@textField name="asin" label="ASIN" initialValue="${book.amazonId!}" />
+            <@textField name="amazonId" label="ASIN" initialValue="${book.amazonId!}" />
             <tr>
                 <td class="labelCell tall">Cover Image:</td>
                 <td>

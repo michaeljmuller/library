@@ -1,8 +1,11 @@
 package org.themullers.library.web;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
@@ -18,13 +21,13 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
 public class LibraryController {
+
+    private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MM/dd/yyyy");
 
     LibraryDAO dao;
     LibraryOSAO osao;
@@ -228,7 +231,7 @@ public class LibraryController {
     @GetMapping("/forms/editbook/{id}")
     public ModelAndView editBookFormDisplay(@PathVariable("id") int bookId) throws IOException {
         var mv = new LibraryModelAndView("/edit-book-form");
-        populateEditBookPageModel(mv, dao.fetchBook(bookId));
+        populateEditBookPageModel(mv, dao.fetchBook(bookId), true);
         return mv;
     }
 
@@ -249,7 +252,7 @@ public class LibraryController {
         // if there are any validation errors, display them on this page
         if (errors.size() > 0) {
             var mv = new LibraryModelAndView("/edit-book-form");
-            populateEditBookPageModel(mv, formBook);
+            populateEditBookPageModel(mv, formBook, true);
             mv.addObject("errors", errors);
             return mv;
         }
@@ -262,7 +265,6 @@ public class LibraryController {
     }
 
     protected record EditBookFormData(HttpServletRequest request) implements FormData {
-        static SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
 
         public EditBookFormValidation validate() {
             var errors = new LinkedList<String>();
@@ -325,11 +327,11 @@ public class LibraryController {
 
         @Override
         public SimpleDateFormat dateFormat() {
-            return dateFormat;
+            return DATE_FORMAT;
         }
     }
 
-    protected void populateEditBookPageModel(ModelAndView mv, Book book) throws IOException {
+    protected void populateEditBookPageModel(ModelAndView mv, Book book, boolean isEdit) throws IOException {
 
         // get lists of object ids of each type that are not currently attached to any books in the database
         var objIds = libUtils.fetchUnattachedObjectIds();
@@ -351,6 +353,7 @@ public class LibraryController {
             Collections.sort(audiobooks);
         }
 
+        mv.addObject("operation", "edit");
         mv.addObject("book", book);
         mv.addObject("authorList", dao.fetchAllAuthors());
         mv.addObject("seriesList", dao.fetchAllSeries());
@@ -359,7 +362,9 @@ public class LibraryController {
         mv.addObject("unattachedMobis", mobis);
         mv.addObject("unattachedAudiobooks", audiobooks);
         mv.addObject("bookImages", bookImageCache.imagesFromBook(book.getEpubObjectKey()));
-        mv.addObject("hasCoverImage", dao.hasCoverImage(book.getId()));
+        mv.addObject("hasCoverImage", isEdit ? dao.hasCoverImage(book.getId()) : false);
+        mv.addObject("operation", isEdit ? "edit" : "add");
+        mv.addObject("formAction", isEdit ? "/forms/editbook/" + book.getId() : "/api/addBook");
     }
 
     /**
@@ -393,5 +398,83 @@ public class LibraryController {
     public ModelAndView updateMetadata(@PathVariable("id") int id) {
         // TODO
         return null;
+    }
+
+    @GetMapping("/addBooks")
+    public ModelAndView addBooks() {
+
+        // get lists of object ids of each type that are not currently attached to any books in the database
+        var objIds = libUtils.fetchUnattachedObjectIds();
+        var epubs = objIds.stream().filter(o -> o.toLowerCase().endsWith("epub")).collect(Collectors.toList());
+
+        var mv = new LibraryModelAndView("/add-books");
+        mv.addObject("epubs", epubs);
+        return mv;
+    }
+
+    @GetMapping("/addBook")
+    public ModelAndView displayAddBookForm(@RequestParam("epub") String epubObjKey) throws IOException {
+
+        var mv = new LibraryModelAndView("/edit-book-form");
+
+        var book = new Book();
+        book.setEpubObjectKey(epubObjKey);
+        populateEditBookPageModel(mv, book, false);
+
+        return mv;
+    }
+
+    record FormValidation(boolean isSuccess, List<String> messages) {
+    }
+
+    @PostMapping(value="/api/addBook", produces="application/json;charset=UTF-8")
+    public ResponseEntity<FormValidation> addBook(@RequestBody BookForm book) {
+
+        System.out.println(book.toString());
+
+        var msgs = new LinkedList<String>();
+        msgs.add("blank something");
+        msgs.add("something else formatted wrong");
+        return new ResponseEntity<FormValidation>(new FormValidation(false, msgs), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    public static class BookForm extends Book {
+        String coverImage;
+        String newTags;
+
+        @JsonFormat(pattern="MM/dd/yyyy")
+        public void setAcquisitionDate(Date acquisitionDate) {
+            super.setAcquisitionDate(acquisitionDate);
+        }
+
+        public String getCoverImage() {
+            return coverImage;
+        }
+
+        public void setCoverImage(String coverImage) {
+            this.coverImage = coverImage;
+        }
+
+        public String getNewTags() {
+            return newTags;
+        }
+
+        public void setNewTags(String newTags) {
+            this.newTags = newTags;
+        }
+
+        public void addNewTags() {
+            if (!Utils.isBlank(newTags)) {
+                var tags = Arrays.stream(newTags.split(",")).map(String::trim).collect(Collectors.toList());
+            }
+        }
+
+        @Override
+        public String toString() {
+            var sb = new StringBuilder(super.toString());
+            sb.append("\ncover img: " + coverImage);
+            sb.append("\nnew tags: " + newTags);
+            return sb.toString();
+        }
     }
 }

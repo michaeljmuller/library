@@ -70,6 +70,12 @@ public class LibraryDAO {
         return jt.queryForObject("select count(*) from cover_images where book_id = ?", Integer.class, bookId) > 0;
     }
 
+    public Integer fetchBookIdForEpub(String epubObjectKey) {
+        return jt.query("select id from books where epub_object_key = ?", rs -> {
+            return rs.first() ? rs.getObject("id", Integer.class) : null;
+        }, epubObjectKey);
+    }
+
     /**
      * Returns the S3 object key for the epub with the given book ID.
      * @param bookId  the database ID of the ebook
@@ -222,7 +228,7 @@ public class LibraryDAO {
      */
     public byte[] fetchImageForEbook(int bookId) {
         try {
-            String sql = "select bits from cover_images where id = ?";
+            String sql = "select bits from cover_images where book_id = ?";
             Blob blob = jt.queryForObject(sql, Blob.class, bookId);
             return blob == null ? null : blob.getBytes(1, (int) blob.length());
         }
