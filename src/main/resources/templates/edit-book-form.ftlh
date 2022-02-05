@@ -41,6 +41,9 @@
         }
 
         function handleFormSubmitResponse(event) {
+
+            alert(event.target.responseText);
+
             let response = JSON.parse(event.target.responseText);
             if (response.isSuccess) {
                 alert("success!");
@@ -129,11 +132,10 @@
             <@textField name="author" label="Author" initialValue="${book.author!}" />
             <@textField name="author2" initialValue="${book.author2!}" />
             <@textField name="author3" initialValue="${book.author3!}" />
-            <@textField name="publicationYear" label="Pub Year" initialValue="${(book.publicationYear?c)!}" />
+            <@textField name="publicationYearString" label="Pub Year" initialValue="${(book.publicationYear?c)!}" />
             <@textField name="series" label="Series" initialValue="${book.series!}" />
             <@textField name="seriesSequence" label="Series #" initialValue="${(book.seriesSequence?c)!}" />
-            <@textField name="acquisitionDate" label="Acq Date" initialValue="${(book.acquisitionDate?string['MM/dd/yyyy'])!}" />
-
+            <@textField name="acquisitionDateString" label="Acq Date" initialValue="${(book.acquisitionDate?string['MM/dd/yyyy'])!}" />
             <tr>
                 <td class="labelCell tall">Tags:</td>
                 <td>

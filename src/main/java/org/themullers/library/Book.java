@@ -9,21 +9,21 @@ import java.util.Set;
  * A simple Java class containing information about one of the library's books.
  */
 public class Book {
-    private Integer id;
-    private String title;
-    private String author;
-    private String author2;
-    private String author3;
-    private Integer publicationYear;
-    private String series;
-    private Integer seriesSequence;
-    private Date acquisitionDate;
-    private String altTitle1;
-    private String altTitle2;
-    private String epubObjectKey;
-    private String mobiObjectKey;
-    private String audiobookObjectKey;
-    private String amazonId;
+    protected Integer id;
+    protected String title;
+    protected String author;
+    protected String author2;
+    protected String author3;
+    protected Integer publicationYear;
+    protected String series;
+    protected Integer seriesSequence;
+    protected Date acquisitionDate;
+    protected String altTitle1;
+    protected String altTitle2;
+    protected String epubObjectKey;
+    protected String mobiObjectKey;
+    protected String audiobookObjectKey;
+    protected String amazonId;
 
     private Set<String> tags = new HashSet<>();
 

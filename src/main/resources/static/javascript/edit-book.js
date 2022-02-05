@@ -183,7 +183,7 @@ function displayErrors(errors, errorListElementId) {
 function removeAllChildren(parent) {
     var child = parent.lastElementChild;
     while (child) {
-        e.removeChild(child);
+        parent.removeChild(child);
         child = parent.lastElementChild;
     }
 }

@@ -35,6 +35,10 @@ public class Utils {
         return str == null || str.trim().length() == 0;
     }
 
+    public static boolean isNotBlank(String str) {
+        return str != null && str.trim().length() > 0;
+    }
+
     public static boolean isValidFormatEmail(String email) {
         // from https://www.baeldung.com/java-email-validation-regex
         var emailRegex = "^(?=.{1,64}@)[A-Za-z0-9\\+_-]+(\\.[A-Za-z0-9\\+_-]+)*@"

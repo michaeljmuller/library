@@ -72,10 +72,26 @@ public class LibUtils {
      * @return the mime type
      */
     public String mimeTypeForFile(String filename) {
-        if (filename.toLowerCase().endsWith(".epub")) {
+
+        var lcFilename = filename.toLowerCase();
+
+        if (lcFilename.endsWith(".epub")) {
             return "application/epub+zip";
-        } else if (filename.toLowerCase().endsWith(".m4b")) {
+        }
+        else if (lcFilename.endsWith(".m4b")) {
             return "audio/mp4a-latm";
+        }
+        else if (lcFilename.endsWith(".jpg") || lcFilename.endsWith(".jpeg")) {
+            return "image/jpeg";
+        }
+        else if (lcFilename.endsWith(".png")) {
+            return "image/png";
+        }
+        else if (lcFilename.endsWith(".gif")) {
+            return "image/gif";
+        }
+        else if (lcFilename.endsWith(".svg")) {
+            return "image/svg+xml";
         }
 
         throw new RuntimeException("can't determine mime type for file " + filename);

@@ -1,11 +1,11 @@
 package org.themullers.library.web;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
@@ -20,12 +20,16 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
 public class LibraryController {
+
+    private Logger logger = LoggerFactory.getLogger(LibraryController.class);
 
     private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MM/dd/yyyy");
 
@@ -417,30 +421,93 @@ public class LibraryController {
 
         var mv = new LibraryModelAndView("/edit-book-form");
 
-        var book = new Book();
+        var mobiObjectKey = matchingMobi(epubObjKey);
+
+        var book = new BookForm();
         book.setEpubObjectKey(epubObjKey);
+        book.setMobiObjectKey(mobiObjectKey);
         populateEditBookPageModel(mv, book, false);
 
         return mv;
     }
 
-    record FormValidation(boolean isSuccess, List<String> messages) {
+    @PostMapping(value="/api/addBook", produces="application/json;charset=UTF-8")
+    public FormValidation addBook(@RequestBody BookForm book) {
+        var v = new FormValidation();
+        try {
+            v.checkIsBlank(book.getTitle(), "Missing title");
+            v.checkIsBlank(book.getAuthor(), "Missing author");
+            v.checkIsBlank(book.getPublicationYearString(), "Missing publication year");
+            v.checkNotPattern(book.getPublicationYearString(), "\\d{4}", "Bad format publication year");
+            v.check(Utils.isNotBlank(book.getSeries()) && Utils.isBlank(book.getSeriesSequenceString()), "Missing series # (required when series is provided)");
+            v.checkNotPattern(book.getSeriesSequenceString(), "\\d+", "Bad format series #");
+            v.checkIsBlank(book.getAcquisitionDateString(), "Missing acquisition date");
+            v.checkNotPattern(book.getAcquisitionDateString(), "\\d{1,2}/\\d{1,2}/\\d{4}", "Acquisition date must be mm/dd/yyyy");
+            v.checkIsBlank(book.getEpubObjectKey(), "No EPUB selected");
+
+            if (v.isOkay()) {
+                book.merge();
+                var bookId = dao.insertBook(book);
+                var coverImageFilename = book.getCoverImage();
+                if (!Utils.isBlank(coverImageFilename)) {
+                    var coverImageFile = bookImageCache.getUploadedBookFromCache(0, coverImageFilename);
+                    if (coverImageFile == null) {
+                        coverImageFile = bookImageCache.getBookImageFromCache(book.getEpubObjectKey(), coverImageFilename);
+                    }
+                    if (coverImageFile == null) {
+                        logger.error("cover image was specified when adding a book, but now we can't find it in the cover image cache; filename = " + coverImageFilename);
+                    }
+                    else {
+                        dao.insertCoverImage(bookId, coverImageFilename, libUtils.mimeTypeForFile(coverImageFilename), Files.readAllBytes(coverImageFile.toPath()));
+                    }
+                }
+            }
+        }
+        catch (Exception x) {
+            v.add("Exception thrown: " + x.getMessage());
+        }
+        return v;
     }
 
-    @PostMapping(value="/api/addBook", produces="application/json;charset=UTF-8")
-    public ResponseEntity<FormValidation> addBook(@RequestBody BookForm book) {
+    public String matchingMobi(String epub) {
+        String mobi = null;
+        if (epub != null) {
+            var lcEpub = epub.toLowerCase();
+            if (lcEpub.endsWith(".epub")) {
+                var base = lcEpub.substring(0, lcEpub.length() - 5);
+                mobi = base + ".mobi";
+            }
+        }
+        return mobi;
+    }
 
-        System.out.println(book.toString());
-
-        var msgs = new LinkedList<String>();
-        msgs.add("blank something");
-        msgs.add("something else formatted wrong");
-        return new ResponseEntity<FormValidation>(new FormValidation(false, msgs), HttpStatus.INTERNAL_SERVER_ERROR);
+    public static class FormValidation extends LinkedList<String> {
+        public void checkNotPattern(String value, String regex, String message) {
+            if (!Utils.isBlank(value) && !value.matches(regex)) {
+                add(message);
+            }
+        }
+        public void checkIsBlank(String value, String message) {
+            if (Utils.isBlank(value)) {
+                add(message);
+            }
+        }
+        public void check(boolean condition, String message) {
+            if (condition) {
+                add(message);
+            }
+        }
+        public boolean isOkay() {
+            return size() == 0;
+        }
     }
 
     public static class BookForm extends Book {
         String coverImage;
         String newTags;
+        String publicationYearString;
+        String seriesSequenceString;
+        String acquisitionDateString;
 
         @JsonFormat(pattern="MM/dd/yyyy")
         public void setAcquisitionDate(Date acquisitionDate) {
@@ -463,7 +530,34 @@ public class LibraryController {
             this.newTags = newTags;
         }
 
-        public void addNewTags() {
+        public String getPublicationYearString() {
+            return publicationYearString;
+        }
+
+        public void setPublicationYearString(String publicationYearString) {
+            this.publicationYearString = publicationYearString;
+        }
+
+        public String getSeriesSequenceString() {
+            return seriesSequenceString;
+        }
+
+        public void setSeriesSequenceString(String seriesSequenceString) {
+            this.seriesSequenceString = seriesSequenceString;
+        }
+
+        public String getAcquisitionDateString() {
+            return acquisitionDateString;
+        }
+
+        public void setAcquisitionDateString(String acquisitionDateString) {
+            this.acquisitionDateString = acquisitionDateString;
+        }
+
+        public void merge() throws ParseException {
+            publicationYear = Integer.parseInt(publicationYearString);
+            seriesSequence = Integer.parseInt(seriesSequenceString);
+            acquisitionDate = DATE_FORMAT.parse(acquisitionDateString);
             if (!Utils.isBlank(newTags)) {
                 var tags = Arrays.stream(newTags.split(",")).map(String::trim).collect(Collectors.toList());
             }
@@ -472,8 +566,10 @@ public class LibraryController {
         @Override
         public String toString() {
             var sb = new StringBuilder(super.toString());
-            sb.append("\ncover img: " + coverImage);
-            sb.append("\nnew tags: " + newTags);
+            sb.append("\ncover img: ").append(coverImage);
+            sb.append("\nnew tags: ").append(newTags);
+            sb.append("\npublication year string: ").append(publicationYearString);
+            sb.append("\nacquisition date string: ").append(acquisitionDateString);
             return sb.toString();
         }
     }
