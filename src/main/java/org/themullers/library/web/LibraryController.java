@@ -1,6 +1,5 @@
 package org.themullers.library.web;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,23 +14,18 @@ import org.themullers.library.*;
 import org.themullers.library.db.LibraryDAO;
 import org.themullers.library.s3.LibraryOSAO;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
 public class LibraryController {
 
     private Logger logger = LoggerFactory.getLogger(LibraryController.class);
-
-    private static SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MM/dd/yyyy");
 
     LibraryDAO dao;
     LibraryOSAO osao;
@@ -61,7 +55,7 @@ public class LibraryController {
 
         // get the most recent books
         int booksPerPage = 6;
-        var newReleases = dao.fetchNewestBooks(booksPerPage, page * booksPerPage);
+        var newReleases = dao.fetchNewestBooks(booksPerPage, (page-1) * booksPerPage);
         mv.addObject("page", page);
         mv.addObject("books", newReleases);
         return mv;
@@ -210,7 +204,7 @@ public class LibraryController {
         libUtils.writeS3ObjectToResponse(obj, response);
     }
 
-    @GetMapping(value = "/audiobook", produces = "application/epub+zip")
+    @GetMapping(value = "/audiobook", produces = "audio/mp4a-latm")
     public void getAudiobook(@RequestParam(value = "bookId") int bookId, HttpServletResponse response) throws IOException {
         var id = dao.fetchAudiobookObjectKey(bookId);
         var obj = osao.readObject(id);
@@ -232,110 +226,20 @@ public class LibraryController {
         bookImageCache.cacheUploadedCoverForBook(file.getOriginalFilename(), file.getInputStream(), bookId);
     }
 
-    @GetMapping("/forms/editbook/{id}")
+    @GetMapping("/editBook/{id}")
     public ModelAndView editBookFormDisplay(@PathVariable("id") int bookId) throws IOException {
         var mv = new LibraryModelAndView("/edit-book-form");
-        populateEditBookPageModel(mv, dao.fetchBook(bookId), true);
+        populateModelForEditBookPage(mv, dao.fetchBook(bookId), true);
         return mv;
     }
 
-    @PostMapping("/forms/editbook/{id}")
-    public ModelAndView editBookFormHandleSubmission(@PathVariable("id") int bookId, HttpServletRequest req) throws IOException {
+    protected void populateModelForEditBookPage(ModelAndView mv, Book book, boolean isEdit) throws IOException {
 
-        var formData = new EditBookFormData(req);
-        var validation = formData.validate();
-
-        var formBook = validation.book();
-        formBook.setId(bookId);
-        var errors = validation.errors();
-
-        var dbBook = dao.fetchBook(bookId);
-        var msg = formBook.equals(dbBook) ? "books match!" : "books don't match :(";
-        errors.add(0, msg);
-
-        // if there are any validation errors, display them on this page
-        if (errors.size() > 0) {
-            var mv = new LibraryModelAndView("/edit-book-form");
-            populateEditBookPageModel(mv, formBook, true);
-            mv.addObject("errors", errors);
-            return mv;
-        }
-        else {
-            throw new RuntimeException("Not yet implemented.");
-        }
-    }
-
-    protected record EditBookFormValidation(List<String> errors, Book book) {
-    }
-
-    protected record EditBookFormData(HttpServletRequest request) implements FormData {
-
-        public EditBookFormValidation validate() {
-            var errors = new LinkedList<String>();
-            var book = new Book();
-            book.setTitle(getString("title"));
-            book.setAltTitle1(getString("altTitle1"));
-            book.setAltTitle2(getString("altTitle2"));
-            book.setAuthor(getString("author"));
-            book.setAuthor2(getString("author2"));
-            book.setAuthor3(getString("author3"));
-            handle(() -> book.setPublicationYear(getInteger("publicationYear")), errors, "Bad publication year");
-            book.setSeries(getString("series"));
-            handle(() ->book.setSeriesSequence(getInteger("seriesSequence")), errors, "Bad format series sequence number");
-            handle(() -> book.setAcquisitionDate(getDate("acquisitionDate")), errors, "Bad format acquisition date");
-            book.setTags(getTags());
-            book.setEpubObjectKey(getString("epubObjectKey"));
-            book.setMobiObjectKey(getString("mobiObjectKey"));
-            book.setAudiobookObjectKey(getString("audiobookObjectKey"));
-            book.setAmazonId(getString("asin"));
-            return new EditBookFormValidation(errors, book);
-        }
-
-        /**
-         * combine the tags from the radio boxes and the text field into one list
+        /*
+        When the user is picking what assets to associate with this book, we want to exclude
+        assets that are already attached to other books; we don't want to have the same book
+        twice in the library.
          */
-        private List<String> getTags() {
-
-            // get the tags from the check boxes (make a copy so we get a mutable list)
-            var tags = new LinkedList<String>(getStrings("tags"));
-
-            // if any additional tags were specified in the text field
-            var newTagsCSV = getString("newTags");
-            if (!Utils.isBlank(newTagsCSV)) {
-
-                // for each new tag in the text area
-                var newTagsArray = newTagsCSV.split(",");
-                for (var newTag : newTagsArray) {
-
-                    // clean any white space from the tag
-                    var trimNewTag = newTag.trim();
-
-                    // if the tag isn't a duplicate of one of the checkboxes, add it to the list
-                    if (newTag.length() > 0 && !tags.contains(trimNewTag)) {
-                        tags.add(trimNewTag);
-                    }
-                }
-            }
-
-            return tags;
-        }
-
-        private void handle(Runnable operation, List<String> errors, String msg) {
-            try {
-                operation.run();
-            }
-            catch (Exception x) {
-                errors.add(msg + " -- " + x.getMessage());
-            }
-        }
-
-        @Override
-        public SimpleDateFormat dateFormat() {
-            return DATE_FORMAT;
-        }
-    }
-
-    protected void populateEditBookPageModel(ModelAndView mv, Book book, boolean isEdit) throws IOException {
 
         // get lists of object ids of each type that are not currently attached to any books in the database
         var objIds = libUtils.fetchUnattachedObjectIds();
@@ -343,21 +247,13 @@ public class LibraryController {
         var mobis = objIds.stream().filter(o -> o.toLowerCase().endsWith("mobi")).collect(Collectors.toList());
         var audiobooks = objIds.stream().filter(o -> o.toLowerCase().endsWith("m4b")).collect(Collectors.toList());
 
-        // if there is an epub already associated with this book, add it to the list
-        var epub = book.getEpubObjectKey();
-        if (epub != null) {
-            epubs.add(epub);
-            Collections.sort(epubs);
+        // if we're editing a book, include as options the assets that are CURRENTLY attached to that book
+        if (isEdit) {
+            addToList(book.getEpubObjectKey(), epubs);
+            addToList(book.getMobiObjectKey(), mobis);
+            addToList(book.getAudiobookObjectKey(), audiobooks);
         }
 
-        // if there is an audiobook already attached to this book, add it to the list
-        var audiobook = book.getAudiobookObjectKey();
-        if (audiobook != null) {
-            audiobooks.add(audiobook);
-            Collections.sort(audiobooks);
-        }
-
-        mv.addObject("operation", "edit");
         mv.addObject("book", book);
         mv.addObject("authorList", dao.fetchAllAuthors());
         mv.addObject("seriesList", dao.fetchAllSeries());
@@ -368,7 +264,14 @@ public class LibraryController {
         mv.addObject("bookImages", bookImageCache.imagesFromBook(book.getEpubObjectKey()));
         mv.addObject("hasCoverImage", isEdit ? dao.hasCoverImage(book.getId()) : false);
         mv.addObject("operation", isEdit ? "edit" : "add");
-        mv.addObject("formAction", isEdit ? "/forms/editbook/" + book.getId() : "/api/addBook");
+        mv.addObject("formAction", isEdit ? "/api/editBook/" + book.getId() : "/api/addBook");
+    }
+
+    protected void addToList(String asset, List<String> listOfAssets) {
+        if (asset != null) {
+            listOfAssets.add(asset);
+            Collections.sort(listOfAssets);
+        }
     }
 
     /**
@@ -390,18 +293,6 @@ public class LibraryController {
     @GetMapping(value="/uploadedImage")
     public Resource getUploadedImage(@RequestParam("bookId") int bookId, @RequestParam("file") String filename) throws FileNotFoundException {
         return new InputStreamResource(new FileInputStream(bookImageCache.getUploadedBookFromCache(bookId, filename)));
-    }
-
-    /**
-     * Updates the metadata for the given book.
-     *
-     * @param id  The book id.
-     * @return
-     */
-    @PostMapping("/metadata/book/{id}")
-    public ModelAndView updateMetadata(@PathVariable("id") int id) {
-        // TODO
-        return null;
     }
 
     @GetMapping("/addBooks")
@@ -426,47 +317,9 @@ public class LibraryController {
         var book = new BookForm();
         book.setEpubObjectKey(epubObjKey);
         book.setMobiObjectKey(mobiObjectKey);
-        populateEditBookPageModel(mv, book, false);
+        populateModelForEditBookPage(mv, book, false);
 
         return mv;
-    }
-
-    @PostMapping(value="/api/addBook", produces="application/json;charset=UTF-8")
-    public FormValidation addBook(@RequestBody BookForm book) {
-        var v = new FormValidation();
-        try {
-            v.checkIsBlank(book.getTitle(), "Missing title");
-            v.checkIsBlank(book.getAuthor(), "Missing author");
-            v.checkIsBlank(book.getPublicationYearString(), "Missing publication year");
-            v.checkNotPattern(book.getPublicationYearString(), "\\d{4}", "Bad format publication year");
-            v.check(Utils.isNotBlank(book.getSeries()) && Utils.isBlank(book.getSeriesSequenceString()), "Missing series # (required when series is provided)");
-            v.checkNotPattern(book.getSeriesSequenceString(), "\\d+", "Bad format series #");
-            v.checkIsBlank(book.getAcquisitionDateString(), "Missing acquisition date");
-            v.checkNotPattern(book.getAcquisitionDateString(), "\\d{1,2}/\\d{1,2}/\\d{4}", "Acquisition date must be mm/dd/yyyy");
-            v.checkIsBlank(book.getEpubObjectKey(), "No EPUB selected");
-
-            if (v.isOkay()) {
-                book.merge();
-                var bookId = dao.insertBook(book);
-                var coverImageFilename = book.getCoverImage();
-                if (!Utils.isBlank(coverImageFilename)) {
-                    var coverImageFile = bookImageCache.getUploadedBookFromCache(0, coverImageFilename);
-                    if (coverImageFile == null) {
-                        coverImageFile = bookImageCache.getBookImageFromCache(book.getEpubObjectKey(), coverImageFilename);
-                    }
-                    if (coverImageFile == null) {
-                        logger.error("cover image was specified when adding a book, but now we can't find it in the cover image cache; filename = " + coverImageFilename);
-                    }
-                    else {
-                        dao.insertCoverImage(bookId, coverImageFilename, libUtils.mimeTypeForFile(coverImageFilename), Files.readAllBytes(coverImageFile.toPath()));
-                    }
-                }
-            }
-        }
-        catch (Exception x) {
-            v.add("Exception thrown: " + x.getMessage());
-        }
-        return v;
     }
 
     public String matchingMobi(String epub) {
@@ -479,98 +332,5 @@ public class LibraryController {
             }
         }
         return mobi;
-    }
-
-    public static class FormValidation extends LinkedList<String> {
-        public void checkNotPattern(String value, String regex, String message) {
-            if (!Utils.isBlank(value) && !value.matches(regex)) {
-                add(message);
-            }
-        }
-        public void checkIsBlank(String value, String message) {
-            if (Utils.isBlank(value)) {
-                add(message);
-            }
-        }
-        public void check(boolean condition, String message) {
-            if (condition) {
-                add(message);
-            }
-        }
-        public boolean isOkay() {
-            return size() == 0;
-        }
-    }
-
-    public static class BookForm extends Book {
-        String coverImage;
-        String newTags;
-        String publicationYearString;
-        String seriesSequenceString;
-        String acquisitionDateString;
-
-        @JsonFormat(pattern="MM/dd/yyyy")
-        public void setAcquisitionDate(Date acquisitionDate) {
-            super.setAcquisitionDate(acquisitionDate);
-        }
-
-        public String getCoverImage() {
-            return coverImage;
-        }
-
-        public void setCoverImage(String coverImage) {
-            this.coverImage = coverImage;
-        }
-
-        public String getNewTags() {
-            return newTags;
-        }
-
-        public void setNewTags(String newTags) {
-            this.newTags = newTags;
-        }
-
-        public String getPublicationYearString() {
-            return publicationYearString;
-        }
-
-        public void setPublicationYearString(String publicationYearString) {
-            this.publicationYearString = publicationYearString;
-        }
-
-        public String getSeriesSequenceString() {
-            return seriesSequenceString;
-        }
-
-        public void setSeriesSequenceString(String seriesSequenceString) {
-            this.seriesSequenceString = seriesSequenceString;
-        }
-
-        public String getAcquisitionDateString() {
-            return acquisitionDateString;
-        }
-
-        public void setAcquisitionDateString(String acquisitionDateString) {
-            this.acquisitionDateString = acquisitionDateString;
-        }
-
-        public void merge() throws ParseException {
-            publicationYear = Integer.parseInt(publicationYearString);
-            seriesSequence = Integer.parseInt(seriesSequenceString);
-            acquisitionDate = DATE_FORMAT.parse(acquisitionDateString);
-            if (!Utils.isBlank(newTags)) {
-                var tags = Arrays.stream(newTags.split(",")).map(String::trim).collect(Collectors.toList());
-            }
-        }
-
-        @Override
-        public String toString() {
-            var sb = new StringBuilder(super.toString());
-            sb.append("\ncover img: ").append(coverImage);
-            sb.append("\nnew tags: ").append(newTags);
-            sb.append("\npublication year string: ").append(publicationYearString);
-            sb.append("\nacquisition date string: ").append(acquisitionDateString);
-            return sb.toString();
-        }
     }
 }

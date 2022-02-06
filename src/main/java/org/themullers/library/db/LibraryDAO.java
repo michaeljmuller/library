@@ -350,13 +350,14 @@ public class LibraryDAO {
     }
 
     /**
-     * Inserts a cover image into the database.
+     * Inserts a cover image into the database, deleting any previous cover images.
      * @param bookId  the id (foreign key) of the book whose cover should be inserted
      * @param filename  the cover image's filename
      * @param mimeType  the mime type of the cover image
      * @param bytes  the cover image
      */
     public void insertCoverImage(int bookId, String filename, String mimeType, byte[] bytes) {
+        jt.update("delete from cover_images where book_id = ?", bookId);
         jt.update("insert into cover_images (book_id, filename, mime_type, bits) values (?, ?, ? , ?)", bookId, filename, mimeType, bytes);
     }
 

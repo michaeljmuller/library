@@ -171,27 +171,6 @@ public class SpreadsheetService {
             addToList(book.getAudiobookObjectKey(), dbAudiobooks);
         }
 
-        // what books exist in S3 that aren't in the database?
-        var newAudiobookNum = 0;
-        for (var obj : objects) {
-
-            // if there's an epub that's not in the database
-            if (obj.toLowerCase().endsWith(".epub") && !dbEbooks.contains(obj)) {
-                var book = new Book();
-                book.setEpubObjectKey(obj);
-                book.setAcquisitionDate(new Date());
-                writeBookToSpreadsheet(book, sheet, rowNum++);
-            }
-
-            // if there's an audiobook that's not in the database, write its name to another sheet
-            if (obj.toLowerCase().endsWith(".m4b") && !dbAudiobooks.contains(obj)) {
-                var row = audioSheet.createRow(newAudiobookNum++);
-                var cell = row.createCell(0);
-                cell.setCellType(CellType.STRING);
-                cell.setCellValue(obj);
-            }
-        }
-
         // resize the columns to fit the content
         for (var column : Column.values()) {
             sheet.autoSizeColumn(column.getNumber());

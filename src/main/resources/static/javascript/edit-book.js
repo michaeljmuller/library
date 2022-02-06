@@ -187,3 +187,25 @@ function removeAllChildren(parent) {
         child = parent.lastElementChild;
     }
 }
+
+function responseJsonToMessageArray(response) {
+
+    let obj = JSON.parse(response);
+
+    /*
+    sometimes (auth failure, for example) spring boot will respond rather than the controller;
+    if that's the case, we get an object like this:
+
+    {"timestamp":"2022-02-05T18:38:45.766+00:00","status":403,"error":"Forbidden","path":"/api/addBook"}
+
+    when that happens, we build an error message array from the message in that response object
+     */
+    if (!Array.isArray(obj)) {
+        return ["Server responded with status " + obj.status + " and message: " + obj.error];
+    }
+
+    // otherwise, we just return the unmarshalled javascript array
+    else {
+        return obj;
+    }
+}

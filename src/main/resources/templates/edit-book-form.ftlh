@@ -44,14 +44,14 @@
 
             alert(event.target.responseText);
 
-            let response = JSON.parse(event.target.responseText);
-            if (response.isSuccess) {
+            let response = responseJsonToMessageArray(event.target.responseText);
+            if (response.length == 0) {
                 alert("success!");
-                windows.location.href = "/addBooks";
+                window.location.href = "/addBooks";
             }
             else {
                 alert("failure; see messages at top of page");
-                displayErrors(response.messages, "errors");
+                displayErrors(response, "errors");
             }
         }
     </script>
@@ -95,7 +95,7 @@
     </tr>
 </#macro>
 
-<#macro coverImage index label url>
+<#macro coverImage index label url checked=false>
     <div class="coverImageWrapper">
         <div class="coverImage">
             <label for="image${index}">
@@ -103,12 +103,12 @@
             </label>
         </div>
         <div class="coverImageLabel">
-            <input type="radio" name="coverImage" value="${label}" id="image${index}"><label for="image${index}">${label}</label>
+            <input type="radio" name="coverImage" value="${label}" id="image${index}" <#if checked>checked</#if>><label for="image${index}">${label}</label>
         </div>
     </div>
 </#macro>
 
-<@c.page title="Edit Book" additionalHeadContent=hdr>
+<@c.page title=(operation == "add")?then("Add Book", "Edit Book") additionalHeadContent=hdr>
 
     <ul id="errors">
         <#if errors?? >
@@ -126,6 +126,9 @@
             <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
         </#if>
         <table id="fieldTable">
+            <@optionField name="epubObjectKey" label="EPUB" values=unattachedEpubs selectedValue=book.epubObjectKey! />
+            <@optionField name="mobiObjectKey" label="MOBI" values=unattachedMobis selectedValue=book.mobiObjectKey! />
+            <@optionField name="audiobookObjectKey" label="Audiobook" values=unattachedAudiobooks selectedValue=book.audiobookObjectKey! />
             <@textField name="title" label="Title" initialValue="${book.title!}" id="titleField" autofocus=true />
             <@textField name="altTitle1" initialValue="${book.altTitle1!}" />
             <@textField name="altTitle2" initialValue="${book.altTitle2!}" />
@@ -134,7 +137,7 @@
             <@textField name="author3" initialValue="${book.author3!}" />
             <@textField name="publicationYearString" label="Pub Year" initialValue="${(book.publicationYear?c)!}" />
             <@textField name="series" label="Series" initialValue="${book.series!}" />
-            <@textField name="seriesSequence" label="Series #" initialValue="${(book.seriesSequence?c)!}" />
+            <@textField name="seriesSequenceString" label="Series #" initialValue="${(book.seriesSequence?c)!}" />
             <@textField name="acquisitionDateString" label="Acq Date" initialValue="${(book.acquisitionDate?string['MM/dd/yyyy'])!}" />
             <tr>
                 <td class="labelCell tall">Tags:</td>
@@ -151,9 +154,6 @@
                 </td>
             </tr>
             <@textField name="newTags" label="New Tags" />
-            <@optionField name="epubObjectKey" label="EPUB" values=unattachedEpubs selectedValue=book.epubObjectKey! />
-            <@optionField name="mobiObjectKey" label="MOBI" values=unattachedMobis selectedValue=book.mobiObjectKey! />
-            <@optionField name="audiobookObjectKey" label="Audiobook" values=unattachedAudiobooks selectedValue=book.audiobookObjectKey! />
             <@textField name="amazonId" label="ASIN" initialValue="${book.amazonId!}" />
             <tr>
                 <td class="labelCell tall">Cover Image:</td>
@@ -161,7 +161,7 @@
                     <div id="coverImages">
                         <#if hasCoverImage>
                             <#assign url = "/cover?book=" + book.id?c >
-                            <@coverImage 999 "Existing Cover" url />
+                            <@coverImage 999 "Existing Cover" url true/>
                         </#if>
                         <#list bookImages as image>
                             <#assign url = "/epubImage?objId=" + book.epubObjectKey?url + "&file=" + image?url >
