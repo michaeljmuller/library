@@ -11,7 +11,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.InputStream;
+import java.io.*;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -42,10 +42,24 @@ public class LibraryOSAO implements InitializingBean {
 
     public List<String> listObjects() {
         var objects = new LinkedList<String>();
-        for (var summary: s3.listObjects(getBucketName()).getObjectSummaries()) {
-            objects.add(summary.getKey());
+
+        var batch = s3.listObjects(getBucketName());
+        boolean hasMoreObjects = true;
+
+        while (hasMoreObjects) {
+            for (var summary : batch.getObjectSummaries()) {
+                objects.add(summary.getKey());
+            }
+            hasMoreObjects = batch.isTruncated();
+            if (hasMoreObjects) {
+                batch = s3.listNextBatchOfObjects(batch);
+            }
         }
         return objects;
+    }
+
+    public void deleteObject(String objectKey) {
+        s3.deleteObject(getBucketName(), objectKey);
     }
 
     public S3Object readObject(String objectKey) {
@@ -62,6 +76,15 @@ public class LibraryOSAO implements InitializingBean {
         var metadata = new ObjectMetadata();
         metadata.setContentLength(contentLength);
         s3.putObject(getBucketName(), objectKey, is, metadata);
+    }
+
+    public void uploadObject(File file) {
+        var contentLength = file.length();
+        try (var is = new FileInputStream(file)) {
+            uploadObject(is, contentLength, file.getName());
+        } catch (IOException e) {
+            throw new ObjectStoreException(e);
+        }
     }
 
     // SPRING INITIALIZATION

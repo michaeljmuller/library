@@ -1,32 +1,13 @@
-package org.themullers.library;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.SingleConnectionDataSource;
-import org.themullers.library.db.LibraryDAO;
+package org.themullers.library.tools;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.DriverManager;
+import java.sql.SQLException;
 
-public class CoverUploader {
-    public static void main(String[] args) throws Exception {
+public class CoverUploader extends CommandLineTool {
 
-        // turn down the root logging
-        var root = (Logger) org.slf4j.LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-        root.setLevel(Level.ERROR);
-
-        // set OUR logging at "info"
-        var logger = (Logger) org.slf4j.LoggerFactory.getLogger("org.themullers.library.CoverUpdater");
-        logger.setLevel(Level.INFO);
-
-        // get a data access object
-        var url = "jdbc:mariadb://themullers.org:3306/new_library?user=library&password=library";
-        var connection = DriverManager.getConnection(url);
-        var jt = new JdbcTemplate(new SingleConnectionDataSource(connection, true));
-        var dao = new LibraryDAO(jt);
+    public void uploadCovers() throws IOException {
 
         // walk through all the documents in the calibre directory
         var rootDir = "/Users/mmuller/Documents/Calibre";
@@ -75,5 +56,13 @@ public class CoverUploader {
 
                     logger.info("uploaded cover image for " + epub);
                 });
+    }
+
+    public CoverUploader() throws IOException, SQLException {
+        super();
+    }
+
+    public static void main(String[] args) throws Exception {
+        new CoverUploader().uploadCovers();
     }
 }

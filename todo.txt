@@ -6,14 +6,16 @@ TO DO:
 - resize image books (smaller for faster load)
 - display multiple authors on book card
 - freeze header, scroll stuff below
-- handle mobi
 - search
 - sort authors by last name
 - find a better way of handling new DB entries (than appending them to the end of metadata ss)
 - some unauthenticated dialogs have no header-window-bar-title
 - cover image download endpoint assumes JPEG
+- home page has redundant title "mike's lib: mike's lib"
+- implement "checkout"?
 
 DONE:
+- handle mobi
 - larger fonts for mobile
 - remove background image (super slow)
 - test improved metadata upload/sync functionality

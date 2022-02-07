@@ -153,4 +153,15 @@ public class LibUtils {
         return unattachedObjectIds;
     }
 
+    public static String matchingMobi(String epub) {
+        String mobi = null;
+        if (epub != null) {
+            var lcEpub = epub.toLowerCase();
+            if (lcEpub.endsWith(".epub")) {
+                var base = epub.substring(0, lcEpub.length() - 5);
+                mobi = base + ".mobi";
+            }
+        }
+        return mobi;
+    }
 }

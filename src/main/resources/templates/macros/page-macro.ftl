@@ -30,8 +30,8 @@
                             <ul>
                                 <li><a href="/metadata">Metadata</a></li>
                                 <li><a href="#">Users</a></li>
-                                <li><a href="https://cloud.linode.com/object-storage/buckets/us-east-1/michaeljmuller-media" target="_blank">Assets</a></li>
-                                <li><a href="/addBooks">Add Books</a></li>
+                                <li><a href="https://cloud.linode.com/object-storage/buckets/us-east-1/michaeljmuller-media" target="_blank">Upload Assets</a></li>
+                                <li><a href="/admin/newAssets">New Assets</a></li>
                             </ul>
                         </li>
                     </#if>

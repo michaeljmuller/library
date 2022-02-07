@@ -15,7 +15,7 @@
             flex: 1 1 0px;
         }
 
-        img {
+        .book-cover-image img {
             max-height: 100%;
             max-width: 100%;
             border-radius: 20px;
@@ -26,18 +26,22 @@
         }
 
         img.link-icon {
-            width: 1em;
+            width: 3em;
             height: auto;
+        }
+
+        .icon-and-link {
+            display: flex;
+            align-items: center;
         }
     </style>
 </#assign>
 
 <#macro link text url iconUrl test newTab=false>
     <#if test>
-        <div>
-            <a href="${url}" <#if newTab>target="_blank"</#if>>
-                <img class="link-icon" src="${iconUrl}" />
-            </a>
+        <div class="icon-and-link">
+            <a href="${url}" <#if newTab>target="_blank"</#if>><img class="link-icon" src="${iconUrl}" /></a>
+            &nbsp;
             <a href="${url}" <#if newTab>target="_blank"</#if>>${text}</a>
         </div>
     </#if>

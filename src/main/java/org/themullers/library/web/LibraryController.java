@@ -310,7 +310,7 @@ public class LibraryController {
         return new InputStreamResource(new FileInputStream(bookImageCache.getUploadedBookFromCache(bookId, filename)));
     }
 
-    @GetMapping("/addBooks")
+    @GetMapping("/admin/newAssets")
     public ModelAndView addBooks() {
 
         // get lists of object ids of each type that are not currently attached to any books in the database
@@ -327,7 +327,7 @@ public class LibraryController {
 
         var mv = new LibraryModelAndView("/edit-book-form");
 
-        var mobiObjectKey = matchingMobi(epubObjKey);
+        var mobiObjectKey = LibUtils.matchingMobi(epubObjKey);
 
         var book = new BookForm();
         book.setEpubObjectKey(epubObjKey);
@@ -337,15 +337,4 @@ public class LibraryController {
         return mv;
     }
 
-    public String matchingMobi(String epub) {
-        String mobi = null;
-        if (epub != null) {
-            var lcEpub = epub.toLowerCase();
-            if (lcEpub.endsWith(".epub")) {
-                var base = lcEpub.substring(0, lcEpub.length() - 5);
-                mobi = base + ".mobi";
-            }
-        }
-        return mobi;
-    }
 }
