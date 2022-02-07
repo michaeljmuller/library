@@ -79,7 +79,7 @@ public class BookForm extends Book {
             acquisitionDate = DATE_FORMAT.parse(acquisitionDateString);
         }
         if (Utils.isNotBlank(newTags)) {
-            var tags = Arrays.stream(newTags.split(",")).map(String::trim).collect(Collectors.toList());
+            addTags(Arrays.stream(newTags.split(",")).map(String::trim).collect(Collectors.toList()));
         }
     }
 

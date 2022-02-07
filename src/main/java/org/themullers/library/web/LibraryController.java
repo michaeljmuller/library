@@ -96,13 +96,13 @@ public class LibraryController {
     }
 
     /**
-     * Handle a request to provide a cover image for an book.
+     * Handle a request to provide a cover image for a book.
      *
      * @param bookId the id of the book whose cover should be rendered
      * @return the binary contents of the image
      */
-    @GetMapping(value = "/cover", produces = "image/jpeg")
-    public byte[] cover(@RequestParam(name = "book") int bookId) throws IOException {
+    @GetMapping(value = "/book/cover/{id}", produces = "image/jpeg")
+    public byte[] cover(@PathVariable(name = "id") int bookId) throws IOException {
         return dao.fetchImageForEbook(bookId);
     }
 
@@ -197,15 +197,22 @@ public class LibraryController {
         return mv;
     }
 
-    @GetMapping(value = "/book", produces = "application/epub+zip")
-    public void getEbook(@RequestParam(value = "bookId") int bookId, HttpServletResponse response) throws IOException {
+    @GetMapping(value = "/book/epub/{id}", produces = "application/epub+zip")
+    public void getEpub(@PathVariable(value = "id") int bookId, HttpServletResponse response) throws IOException {
         var id = dao.fetchEpubObjectKey(bookId);
         var obj = osao.readObject(id);
         libUtils.writeS3ObjectToResponse(obj, response);
     }
 
-    @GetMapping(value = "/audiobook", produces = "audio/mp4a-latm")
-    public void getAudiobook(@RequestParam(value = "bookId") int bookId, HttpServletResponse response) throws IOException {
+    @GetMapping(value = "/book/mobi/{id}", produces = "application/epub+zip")
+    public void getMobi(@PathVariable(value = "id") int bookId, HttpServletResponse response) throws IOException {
+        var id = dao.fetchMobiObjectKey(bookId);
+        var obj = osao.readObject(id);
+        libUtils.writeS3ObjectToResponse(obj, response);
+    }
+
+    @GetMapping(value = "/book/m4b/{id}", produces = "audio/mp4a-latm")
+    public void getAudiobook(@PathVariable(value = "id") int bookId, HttpServletResponse response) throws IOException {
         var id = dao.fetchAudiobookObjectKey(bookId);
         var obj = osao.readObject(id);
         libUtils.writeS3ObjectToResponse(obj, response);
@@ -227,9 +234,17 @@ public class LibraryController {
     }
 
     @GetMapping("/editBook/{id}")
-    public ModelAndView editBookFormDisplay(@PathVariable("id") int bookId) throws IOException {
+    public ModelAndView editBookFormDisplay(@PathVariable("id") int bookId, @RequestHeader(value="Referer", required=false) String httpReferrer) throws IOException {
         var mv = new LibraryModelAndView("/edit-book-form");
+        mv.addObject("referrer", httpReferrer);
         populateModelForEditBookPage(mv, dao.fetchBook(bookId), true);
+        return mv;
+    }
+
+    @GetMapping("/book/{id}")
+    public ModelAndView showBookDetails(@PathVariable("id") int bookId) {
+        var mv = new LibraryModelAndView("/book-details");
+        mv.addObject("book", dao.fetchBook(bookId));
         return mv;
     }
 

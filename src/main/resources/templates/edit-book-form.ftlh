@@ -42,12 +42,10 @@
 
         function handleFormSubmitResponse(event) {
 
-            alert(event.target.responseText);
-
             let response = responseJsonToMessageArray(event.target.responseText);
             if (response.length == 0) {
-                alert("success!");
-                window.location.href = "/addBooks";
+                alert("Book information saved.");
+                window.location.href = "${referrer!"/"}";
             }
             else {
                 alert("failure; see messages at top of page");
@@ -160,7 +158,7 @@
                 <td>
                     <div id="coverImages">
                         <#if hasCoverImage>
-                            <#assign url = "/cover?book=" + book.id?c >
+                            <#assign url = "/book/cover/" + book.id?c >
                             <@coverImage 999 "Existing Cover" url true/>
                         </#if>
                         <#list bookImages as image>

@@ -107,7 +107,6 @@ book-grid-container (contains all the books)
 }
 
 .book-grid-item .book-info {
-    position: relative; /* so we can put the action icons at the bottom */
     padding-left: 1em; /* so there's space between the cover image and the text */
     flex: 60;
     height: 100%;
@@ -126,8 +125,7 @@ book-grid-container (contains all the books)
     border-radius: 1em;
 }
 
-.book-info-text {
-    padding-bottom: 3em;
+.book-grid-container .book-grid-item .book-info .book-info-text {
     display: grid;
     grid-gap: 1em;
 }
@@ -138,15 +136,4 @@ book-grid-container (contains all the books)
 
 .book-info-acq-date {
     font-style: italic;
-}
-
-.book-info-links {
-    position: absolute;
-    bottom: 0;
-    padding-bottom: 0.5em;
-}
-
-.book-action-icon {
-    height: 2em;
-    max-width: 100%;
 }

@@ -5,9 +5,13 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @EnableWebSecurity
 public class Security extends WebSecurityConfigurerAdapter {
+
+    public final static GrantedAuthority ADMIN_AUTHORITY = new SimpleGrantedAuthority("ROLE_admin");
 
     LibraryUserDetailsService userDetailsService;
 

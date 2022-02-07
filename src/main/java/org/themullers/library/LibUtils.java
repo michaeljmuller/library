@@ -78,6 +78,9 @@ public class LibUtils {
         if (lcFilename.endsWith(".epub")) {
             return "application/epub+zip";
         }
+        else if (lcFilename.endsWith(".mobi")) {
+            return "application/x-mobipocket-ebook";
+        }
         else if (lcFilename.endsWith(".m4b")) {
             return "audio/mp4a-latm";
         }

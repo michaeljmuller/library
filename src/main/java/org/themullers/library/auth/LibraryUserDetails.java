@@ -1,7 +1,6 @@
 package org.themullers.library.auth;
 
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.themullers.library.User;
 
@@ -22,7 +21,7 @@ public class LibraryUserDetails extends User implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         var authorities = new LinkedList<GrantedAuthority>();
         if ("mike@themullers.org".equals(email)) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_admin"));
+            authorities.add(Security.ADMIN_AUTHORITY);
         }
         return authorities;
     }

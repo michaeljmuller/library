@@ -77,7 +77,7 @@ public class LibraryDAO {
     }
 
     /**
-     * Returns the S3 object key for the epub with the given book ID.
+     * Returns the S3 object key for the EPUB asset with the given book ID.
      * @param bookId  the database ID of the ebook
      * @return  the ebook's S3 object key
      */
@@ -87,7 +87,17 @@ public class LibraryDAO {
     }
 
     /**
-     * Returns the S3 object key for the audiobook with the given book ID.
+     * Returns the S3 object key for the MOBI asset with the given book ID.
+     * @param bookId  the database ID of the ebook
+     * @return  the ebook's S3 object key
+     */
+    public String fetchMobiObjectKey(int bookId) {
+        String sql = "select mobi_object_key from books where id = ?";
+        return jt.queryForObject(sql, String.class, bookId);
+    }
+
+    /**
+     * Returns the S3 object key for the audiobook asset with the given book ID.
      * @param bookId  the database ID of the audiobook
      * @return  the audiobook's S3 object key
      */

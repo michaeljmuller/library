@@ -72,6 +72,7 @@ public class RestAPIController {
 
                 // update the book in the database
                 dao.updateBook(book);
+                dao.setTags(bookId, book.getTags());
 
                 // update the cover image, if it's been changed
                 var coverImageFilename = book.getCoverImage();
