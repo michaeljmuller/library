@@ -279,7 +279,7 @@ public class LibraryController {
         mv.addObject("bookImages", bookImageCache.imagesFromBook(book.getEpubObjectKey()));
         mv.addObject("hasCoverImage", isEdit ? dao.hasCoverImage(book.getId()) : false);
         mv.addObject("operation", isEdit ? "edit" : "add");
-        mv.addObject("formAction", isEdit ? "/api/editBook/" + book.getId() : "/api/addBook");
+        mv.addObject("formAction", isEdit ? "/api/book/" + book.getId() : "/api/book");
     }
 
     protected void addToList(String asset, List<String> listOfAssets) {
@@ -311,14 +311,22 @@ public class LibraryController {
     }
 
     @GetMapping("/admin/newAssets")
-    public ModelAndView addBooks() {
+    public ModelAndView newAssets() {
 
         // get lists of object ids of each type that are not currently attached to any books in the database
         var objIds = libUtils.fetchUnattachedObjectIds();
-        var epubs = objIds.stream().filter(o -> o.toLowerCase().endsWith("epub")).collect(Collectors.toList());
+        var epubs = objIds.stream().filter(o -> o.toLowerCase().endsWith(".epub")).collect(Collectors.toList());
+        var mobis = objIds.stream().filter(o -> o.toLowerCase().endsWith(".mobi")).collect(Collectors.toList());
+        var audiobooks = objIds.stream().filter(o -> o.toLowerCase().endsWith(".m4b")).collect(Collectors.toList());
 
-        var mv = new LibraryModelAndView("/add-books");
+        // get a list of titles and authors formatted like this: title (author)
+        var titlesAndAuthors = dao.fetchAllBooks().stream().map(b -> b.getTitle() + " (" + b.getAuthor() + ")").sorted().collect(Collectors.toList());
+
+        var mv = new LibraryModelAndView("/new-assets");
         mv.addObject("epubs", epubs);
+        mv.addObject("mobis", mobis);
+        mv.addObject("audiobooks", epubs);
+        mv.addObject("books", titlesAndAuthors);
         return mv;
     }
 

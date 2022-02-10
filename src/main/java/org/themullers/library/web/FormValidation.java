@@ -3,24 +3,48 @@ package org.themullers.library.web;
 import org.themullers.library.Utils;
 
 import java.util.LinkedList;
+import java.util.List;
 
-public class FormValidation extends LinkedList<String> {
+public class FormValidation {
+
+    boolean isSuccess = true;
+    List<String> errorMessages = new LinkedList<String>();
+
+    public void addError(String message) {
+        errorMessages.add(message);
+    }
+
     public void addErrorIfNotMatch(String value, String regex, String message) {
         if (!Utils.isBlank(value) && !value.matches(regex)) {
-            add(message);
+            errorMessages.add(message);
         }
     }
     public void addErrorIfBlank(String value, String message) {
         if (Utils.isBlank(value)) {
-            add(message);
+            errorMessages.add(message);
         }
     }
     public void addErrorIf(boolean condition, String message) {
         if (condition) {
-            add(message);
+            errorMessages.add(message);
         }
     }
-    public boolean isOkay() {
-        return size() == 0;
+
+    // ACCESSOR METHODS
+
+    public boolean isSuccess() {
+        return isSuccess;
+    }
+
+    public void setSuccess(boolean success) {
+        isSuccess = success;
+    }
+
+    public List<String> getErrorMessages() {
+        return errorMessages;
+    }
+
+    public void setErrorMessages(List<String> errorMessages) {
+        this.errorMessages = errorMessages;
     }
 }

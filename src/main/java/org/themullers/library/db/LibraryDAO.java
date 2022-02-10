@@ -149,6 +149,18 @@ public class LibraryDAO {
     }
 
     /**
+     * returns the book matching by title and author #1
+     * @param title  the title of the book to find
+     * @param author  the first author of the book to find
+     * @return  the matching book
+     */
+    public Book fetchBook(String title, String author) {
+        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags from books a left outer join tags t on a.id = t.book_id where a.title=? and a.author=? limit 1", commaSeparated(BOOK_COLS.class, "a"));
+        var books = jt.query(sql, LibraryDAO::mapBook, title, author);
+        return books == null || books.size() < 1 ? null : books.get(0);
+    }
+
+    /**
      * Returns all the books written by a given author.
      * @param author  The name of an author whose books should be returned.
      * @return  list of books

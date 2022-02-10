@@ -13,6 +13,18 @@
         <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
         <link rel="stylesheet" href="/styles/topnav.css">
 
+        <script>
+            <#if _csrf??>
+            let csrfParameterName = "${_csrf.parameterName}";
+            let csrfToken = "${_csrf.token}";
+            let csrfHeaderName = "${_csrf.headerName}";
+            <#else>
+            let csrfParameterName = null;
+            let csrfToken = null;
+            let csrfHeaderName = null;
+            </#if>
+        </script>
+
         ${additionalHeadContent!}
     </head>
     <body>

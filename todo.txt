@@ -13,6 +13,8 @@ TO DO:
 - cover image download endpoint assumes JPEG
 - home page has redundant title "mike's lib: mike's lib"
 - implement "checkout"?
+- fix edit page to use ajax-form.js
+- add a cancel button to the edit book form
 
 DONE:
 - handle mobi

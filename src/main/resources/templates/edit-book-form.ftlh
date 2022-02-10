@@ -12,6 +12,7 @@
     <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
 
     <#-- links to page-specific scripts and styles -->
+    <script src="/javascript/ajax-form.js"></script>
     <script src="/javascript/edit-book.js"></script>
     <link rel="stylesheet" href="/styles/edit-book.css">
 
@@ -20,36 +21,25 @@
         let series = [ <#list seriesList as series>"${series}"<#sep>, </#list>];
         let bookId = ${(book.id!0)?c};
 
-        <#-- TODO: move this to the page macro? -->
-        <#if _csrf??>
-            let csrfParameterName = "${_csrf.parameterName}";
-            let csrfToken = "${_csrf.token}";
-            let csrfHeaderName = "${_csrf.headerName}";
-        <#else>
-            let csrfParameterName = null;
-            let csrfToken = null;
-            let csrfHeaderName = null;
-        </#if>
-
         Dropzone.autoDiscover = false;
 
         window.onload = function() {
             initializeAutocomplete("#author", authors);
             initializeAutocomplete("#series", series);
             initializeDropzone(bookId, csrfParameterName, csrfToken);
-            convertFormToAjax("bookForm", csrfHeaderName, csrfToken, ["tags"], handleFormSubmitResponse);
+            convertFormToAjax(document.getElementById("bookForm"), csrfHeaderName, csrfToken, ["tags"], handleFormSubmitResponse);
         }
 
         function handleFormSubmitResponse(event) {
 
-            let response = responseJsonToMessageArray(event.target.responseText);
-            if (response.length == 0) {
+            let response = parseResponse(event.target.responseText);
+            if (response.success) {
                 alert("Book information saved.");
                 window.location.href = "${referrer!"/"}";
             }
             else {
                 alert("failure; see messages at top of page");
-                displayErrors(response, "errors");
+                displayErrors(response.errorMessages, "errors");
             }
         }
     </script>
@@ -116,12 +106,14 @@
         </#if>
     </ul>
 
-    <form id="bookForm" action="${formAction}" method="post">
+    <#--
+    HTML forms can't submit with PUT, but we're using AJAX to submit this form,
+    the javascrpt that submits the form will inspect the data-ajax-method to
+    determine whether to GET/POST/PUT the form.  See: convertFormToAjax()
+    -->
+    <form id="bookForm" action="${formAction}" data-ajax-method="<#if operation == "add">post<#else>put</#if>">
         <#if book.id??><#-- consider not even passing the ID; it's in the URL for edits -->
             <input type="hidden" name="bookId" value="${book.id?c}" />
-        </#if>
-        <#if _csrf??>
-            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
         </#if>
         <table id="fieldTable">
             <@optionField name="epubObjectKey" label="EPUB" values=unattachedEpubs selectedValue=book.epubObjectKey! />
