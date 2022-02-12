@@ -15,6 +15,7 @@ TO DO:
 - implement "checkout"?
 - fix edit page to use ajax-form.js
 - add a cancel button to the edit book form
+- implement autocomplete in author 2 & 3
 
 DONE:
 - handle mobi

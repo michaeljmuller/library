@@ -33,7 +33,7 @@
         // make all the forms on this page use the ajax
         window.onload = function() {
             document.querySelectorAll("input.book-picker").forEach(input => initializeAutocomplete("#" + input.id, books));
-            document.querySelectorAll("form.mobi-attacher").forEach(form => convertFormToAjax(form, csrfHeaderName, csrfToken, [], handleFormSubmitResponse));
+            document.querySelectorAll("form.asset-attacher").forEach(form => convertFormToAjax(form, csrfHeaderName, csrfToken, [], handleFormSubmitResponse));
         }
 
         function handleFormSubmitResponse(event) {
@@ -43,7 +43,7 @@
                 alert("Book information saved.");
 
                 // remove the item we just "fixed"
-                let li = document.getElementById("mobi" + response.mobiIndex);
+                let li = document.getElementById(response.assetIndex);
                 li.parentNode.removeChild(li);
             }
             else {
@@ -66,12 +66,26 @@
     <div>MOBIs:</div>
     <ul>
         <#list mobis as mobi>
-            <li id="mobi${mobi?index}">
+            <li id="mobi${mobi?index?c}">
                 ${mobi}
                 <#-- data-ajax-method is used by convertFormToAjax() to determine what method to use when submitting the form -->
-                <form class="mobi-attacher" action="/api/mobi/${mobi?url}" data-ajax-method="put">
-                    <input type="hidden" name="mobiIndex" value="${mobi?index?c}" />
+                <form class="asset-attacher" action="/api/asset/${mobi?url}" data-ajax-method="put">
+                    <input type="hidden" name="assetIndex" value="mobi${mobi?index?c}" />
                     <input id="picker${mobi?index?c}" class="book-picker" type="text" name="bookInfo" value="" />
+                    <input type="submit" value="Update Book" />
+                </form>
+            </li>
+        </#list>
+    </ul>
+
+    <div>Audiobooks:</div>
+    <ul>
+        <#list audiobooks as ab>
+            <li id="ab${ab?index?c}">
+                ${ab}
+                <form class="asset-attacher" action="/api/asset/${ab?url}" data-ajax-method="put">
+                    <input type="hidden" name="assetIndex" value="ab${ab?index?c}" />
+                    <input id="ab-picker${ab?index?c}" class="book-picker" type="text" name="bookInfo" value="" />
                     <input type="submit" value="Update Book" />
                 </form>
             </li>

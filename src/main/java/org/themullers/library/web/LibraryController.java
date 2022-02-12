@@ -405,8 +405,34 @@ public class LibraryController {
         var mv = new LibraryModelAndView("/new-assets");
         mv.addObject("epubs", epubs);
         mv.addObject("mobis", mobis);
-        mv.addObject("audiobooks", epubs);
+        mv.addObject("audiobooks", audiobooks);
         mv.addObject("books", titlesAndAuthors);
+        return mv;
+    }
+
+    /**
+     * Display a page of the most recently-acquired books.
+     * @param page  which page of books to display (bigger number for older books)
+     * @return  a view object containing the template that should be used to render the "recent acquisitions" page
+     */
+    @GetMapping("/recents")
+    public ModelAndView recents(@RequestParam(value="page", defaultValue="1") int page) {
+        var mv = new LibraryModelAndView("/recent-acquisitions");
+
+        // get the most recent books
+        int booksPerPage = 50;
+        var newReleases = dao.fetchNewestBooks(booksPerPage, (page-1) * booksPerPage);
+        var numBooks = newReleases.size();
+        var firstBookNum = ((page-1) * booksPerPage) + 1;
+
+        mv.addObject("books", newReleases);
+        mv.addObject("page", page);
+        mv.addObject("nextPage", page+1);
+        mv.addObject("firstBookNum", firstBookNum);
+        mv.addObject("lastBookNum", firstBookNum + numBooks);
+        mv.addObject("firstBookDate", newReleases.get(0).getAcquisitionDate());
+        mv.addObject("lastBookDate",  newReleases.get(numBooks-1).getAcquisitionDate());
+
         return mv;
     }
 }

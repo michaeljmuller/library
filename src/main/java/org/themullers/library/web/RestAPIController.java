@@ -127,42 +127,55 @@ public class RestAPIController {
     }
 
     /**
-     * Update a MOBI by associating it with a book.
-     * @param mobiForm  the information from a form on that page
-     * @param mobi  the MOBI that should be associated with the book specified in the mobiForm
-     * @return  a response object with status, any error message, and the index passed in the mobiForm
+     * Update an asset by associating it with a book.
+     * @param assetForm  the information from a form on that page
+     * @param asset  a MOBI or audiobook that should be associated with the book specified in the assetForm
+     * @return  a response object with status, any error message, and the index passed in the assetForm
      */
-    @PutMapping(value="/api/mobi/{mobi}")
-    public FormValidation assignMobiToBook(@RequestBody MobiForm mobiForm, @PathVariable("mobi") String mobi) {
+    @PutMapping(value="/api/asset/{asset}")
+    public FormValidation assignMobiToBook(@RequestBody AssetForm assetForm, @PathVariable("asset") String asset) {
 
-        var v = new MobiFormValidation(mobiForm.getMobiIndex());
+        var v = new AssetFormValidation(assetForm.getAssetIndex());
 
         try {
-            // parse the book info
-            var pattern = Pattern.compile("(.*)\\ \\((.*)\\)");
-            var matcher = pattern.matcher(mobiForm.getBookInfo());
-            if (matcher.matches()) {
+            if (asset.endsWith(".epub") || asset.endsWith(".m4b")) {
 
-                // extract the title and author
-                var title = matcher.group(1);
-                var author = matcher.group(2);
+                // parse the book info
+                var pattern = Pattern.compile("(.*)\\ \\((.*)\\)");
+                var matcher = pattern.matcher(assetForm.getBookInfo());
+                if (matcher.matches()) {
 
-                // if we can find the book, update it to use the specified MOBI
-                var book = dao.fetchBook(title, author);
-                if (book != null) {
-                    book.setMobiObjectKey(mobi);
-                    dao.updateBook(book);
+                    // extract the title and author
+                    var title = matcher.group(1);
+                    var author = matcher.group(2);
+
+                    // if we can find the book, update it to use the specified asset
+                    var book = dao.fetchBook(title, author);
+                    if (book != null) {
+                        if (asset.endsWith(".epub")) {
+                            book.setMobiObjectKey(asset);
+                        }
+                        if (asset.endsWith(".m4b")) {
+                            book.setAudiobookObjectKey(asset);
+                        }
+                        dao.updateBook(book);
+                    }
+
+                    // if we can't find the book, return a bad status with a message
+                    else {
+                        v.fail("could not find that book in the database");
+                    }
                 }
 
-                // if we can't find the book, return a bad status with a message
+                // if the book info isn't in a valid format, return a bad status with a message
                 else {
-                    v.fail("could not find that book in the database");
+                    v.fail("you need to specify a book in the format 'title (author)'");
                 }
             }
 
-            // if the book info isn't in a valid format, return a bad status with a message
+            // if the asset doesn't end with "epub" or "m4b"
             else {
-                v.fail("you need to specify a book in the format 'title (author)'");
+                v.fail("unrecogized file type: " + asset);
             }
         }
 

@@ -39,6 +39,4 @@ public class BookUploader extends CommandLineTool {
     public static void main(String[] args) throws Exception {
         new BookUploader().uploadBooks();
     }
-
-
 }
