@@ -154,7 +154,7 @@
                             <@coverImage 999 "Existing Cover" url true/>
                         </#if>
                         <#list bookImages as image>
-                            <#assign url = "/epubImage?objId=" + book.epubObjectKey?url + "&file=" + image?url >
+                            <#assign url = "/epubImage?epubObjKey=" + book.epubObjectKey?url + "&file=" + image?url >
                             <@coverImage image?index image url />
                         </#list>
                         <div id="dz-wrapper">
