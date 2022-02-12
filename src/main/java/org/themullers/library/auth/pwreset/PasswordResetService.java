@@ -16,6 +16,9 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 
+/**
+ * Service to support administration of tokens that track users' requests to reset their passwords.
+ */
 @Service
 public class PasswordResetService {
 
@@ -36,6 +39,14 @@ public class PasswordResetService {
         this.applicationBaseURL = applicationBaseURL;
     }
 
+    /**
+     * Validate a password reset token and, if the token is valid, reset the user's password.
+     * @param token  the token submitted with the password reset request
+     * @param userId  the id of the user requesting the password reset
+     * @return  the new password
+     * @throws BadPasswordResetTokenException  thrown if the provided is not a valid token
+     * @throws ExpiredPasswordResetTokenException  thrown if user has taken too long to use the token to reset their password
+     */
     public String processPasswordResetToken(String token, int userId) throws BadPasswordResetTokenException, ExpiredPasswordResetTokenException {
         var tokenInfo = dao.fetchPasswordResetTokenForUser(userId);
         var user = dao.fetchUser(userId);
@@ -66,6 +77,13 @@ public class PasswordResetService {
         return password;
     }
 
+    /**
+     * Send an email to a user with a link that they can use to reset their password.
+     * @param emailAddress  the user's email
+     * @throws IOException  thrown if there is an error writing the email message
+     * @throws TemplateException  thrown if there is an error creating the email message
+     * @throws MessagingException  thrown if there is an error sending the email message
+     */
     public void sendPasswordResetEmail(String emailAddress) throws IOException, TemplateException, MessagingException {
 
         // fetch the user account associated with this email

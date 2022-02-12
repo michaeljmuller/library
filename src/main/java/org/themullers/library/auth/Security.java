@@ -8,6 +8,10 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+/**
+ * Use the Spring Security framework to configure which users
+ * can access which pages.
+ */
 @EnableWebSecurity
 public class Security extends WebSecurityConfigurerAdapter {
 

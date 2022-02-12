@@ -14,6 +14,9 @@ import org.themullers.library.db.LibraryDAO;
 
 import java.util.LinkedList;
 
+/**
+ * Work within the Spring Security framework to authenticate login requests.
+ */
 @Service
 public class Authenticator implements AuthenticationManager {
 
@@ -26,6 +29,12 @@ public class Authenticator implements AuthenticationManager {
         this.dao = dao;
     }
 
+    /**
+     * Authenticate a login request.
+     * @param authentication  the credentials provided at login
+     * @return  an authentication token
+     * @throws AuthenticationException  if the credentials provided are invalid
+     */
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         var email = authentication.getPrincipal();
@@ -55,12 +64,5 @@ public class Authenticator implements AuthenticationManager {
         var authToken = new UsernamePasswordAuthenticationToken(email, password, authorities);
         authToken.setDetails(user);
         return authToken;
-    }
-
-    public static void main(String args[]) {
-        var encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
-        var plainPw = args[0];
-        var encryptedPw = encoder.encode(plainPw);
-        System.out.println(String.format("'%s' encoded is: %s", plainPw, encryptedPw));
     }
 }
