@@ -3,6 +3,9 @@ package org.themullers.library.tools;
 import java.io.IOException;
 import java.sql.SQLException;
 
+/**
+ * Delete all the AZWs from the object store.
+ */
 public class DeleteAzws extends CommandLineTool {
 
     public void execute() {

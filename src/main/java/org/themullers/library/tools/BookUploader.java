@@ -5,6 +5,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 
+/**
+ * Finds books in my calibre repository that aren't in the object store and uploads them.
+ */
 public class BookUploader extends CommandLineTool {
 
     public void uploadBooks() throws IOException {

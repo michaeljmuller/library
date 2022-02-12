@@ -12,6 +12,12 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Map;
 
+/**
+ * This service applies a model to an email template to generate an Email.
+ * If the template is "hello ${recipient} thank you for buying ${product}",
+ * and the model is [ recipient: mike, product: donuts ], the email body would
+ * be "hello mike thank you for buying donuts".
+ */
 @Component
 public class EmailTemplateProcessor {
 
@@ -22,6 +28,14 @@ public class EmailTemplateProcessor {
         this.freemarker = fmc.getConfiguration();
     }
 
+    /**
+     * Generate an email from a template and a model.
+     * @param emailTemplate  the email template
+     * @param model  the model for the information to be substituted into the template
+     * @return  an email
+     * @throws IOException  thrown if an unexpected error occurs building the email
+     * @throws TemplateException  thrown if an unexpected error occurs expanding the email template
+     */
     public Email process(EmailTemplate emailTemplate, Map<String, Object> model) throws IOException, TemplateException {
         var email = new Email();
 
@@ -32,6 +46,14 @@ public class EmailTemplateProcessor {
         return email;
     }
 
+    /**
+     * Process a template that is provided as a string literal.
+     * @param templateString  the template
+     * @param model  the model with values that should be applied into the template
+     * @return  the string resulting from substituting the model values into the template
+     * @throws IOException  thrown if an unexpected error occurs building the template
+     * @throws TemplateException  thrown if an unexpected error occurs expanding the template
+     */
     protected String processTemplateString(String templateString, Map<String, Object> model) throws IOException, TemplateException {
 
         var result = "";
@@ -41,7 +63,7 @@ public class EmailTemplateProcessor {
             try (var stringReader = new StringReader(templateString); var stringWriter = new StringWriter()) {
 
                 // create a new freemarker template from the provided string and process the template
-                var template = new Template("template for subject line of email", stringReader, freemarker);
+                var template = new Template("ad-hoc string template", stringReader, freemarker);
                 template.process(model, stringWriter);
                 result = stringWriter.toString();
             }
@@ -50,6 +72,14 @@ public class EmailTemplateProcessor {
         return result;
     }
 
+    /**
+     * Process a template that is provided in a file.
+     * @param templatePath  the path to the template (relative to maven's src/main/resources)
+     * @param model  the model with values that should be applied into the template
+     * @return  the string resulting from substituting the model values into the template
+     * @throws IOException  thrown if an unexpected error occurs building the template
+     * @throws TemplateException  thrown if an unexpected error occurs expanding the template
+     */
     protected String processTemplateFile(String templatePath, Map<String, Object> model) throws IOException, TemplateException {
 
         var result = "";

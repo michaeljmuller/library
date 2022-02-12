@@ -5,6 +5,9 @@ import org.themullers.library.LibUtils;
 import java.io.IOException;
 import java.sql.SQLException;
 
+/**
+ * For each book that has no MOBI, try to find the MOBI in the object store.
+ */
 public class MobiMatcher extends CommandLineTool {
 
     public void matchMobis() {

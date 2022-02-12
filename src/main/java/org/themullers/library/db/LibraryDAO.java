@@ -17,7 +17,7 @@ import java.util.Date;
 import java.util.stream.Collectors;
 
 /**
- * A library of database access methods.
+ * Database access methods.
  */
 @Component
 public class LibraryDAO {
@@ -29,6 +29,9 @@ public class LibraryDAO {
         this.jt = jt;
     }
 
+    /**
+     * An enumeration of all the columns in the user table.
+     */
     enum USER_COLS {
         id,
         email,
@@ -38,7 +41,7 @@ public class LibraryDAO {
     }
 
     /**
-     * an enumeration of all the columns in the books table
+     * An enumeration of all the columns in the books table.
      */
     enum BOOK_COLS {
         id,
@@ -58,11 +61,10 @@ public class LibraryDAO {
         asin,
     }
 
-    // READ-ONLY METHODS
+    // QUERY METHODS
 
     /**
      * Returns a boolean indicating whether a book has a cover image uploaded.
-     *
      * @param bookId  The book's id
      * @return  boolean indicating whether we have a cover for that book in the DB
      */
@@ -70,6 +72,11 @@ public class LibraryDAO {
         return jt.queryForObject("select count(*) from cover_images where book_id = ?", Integer.class, bookId) > 0;
     }
 
+    /**
+     * Looks up a book with an EPUB having a certain object key.
+     * @param epubObjectKey  the object key to search for
+     * @return  the matching book's id
+     */
     public Integer fetchBookIdForEpub(String epubObjectKey) {
         return jt.query("select id from books where epub_object_key = ?", rs -> {
             return rs.first() ? rs.getObject("id", Integer.class) : null;
@@ -77,7 +84,7 @@ public class LibraryDAO {
     }
 
     /**
-     * Returns the S3 object key for the EPUB asset with the given book ID.
+     * Returns the object key for the EPUB asset with the given book ID.
      * @param bookId  the database ID of the ebook
      * @return  the ebook's S3 object key
      */
@@ -87,9 +94,9 @@ public class LibraryDAO {
     }
 
     /**
-     * Returns the S3 object key for the MOBI asset with the given book ID.
+     * Returns the object key for the MOBI asset with the given book ID.
      * @param bookId  the database ID of the ebook
-     * @return  the ebook's S3 object key
+     * @return  the ebook's object key
      */
     public String fetchMobiObjectKey(int bookId) {
         String sql = "select mobi_object_key from books where id = ?";
@@ -97,9 +104,9 @@ public class LibraryDAO {
     }
 
     /**
-     * Returns the S3 object key for the audiobook asset with the given book ID.
+     * Returns the object key for the audiobook asset with the given book ID.
      * @param bookId  the database ID of the audiobook
-     * @return  the audiobook's S3 object key
+     * @return  the audiobook's object key
      */
     public String fetchAudiobookObjectKey(int bookId) {
         String sql = "select audiobook_object_key from books where id = ?";
@@ -182,6 +189,13 @@ public class LibraryDAO {
         return jt.query(sql, LibraryDAO::mapBook);
     }
 
+    /**
+     * Creates a user object from a row of query result.
+     * @param rs  the result set returned from the query
+     * @param rowNum  the current row of the result set
+     * @return  a user object
+     * @throws SQLException  thrown if an unexpected error occurs fetching information from the result set
+     */
     protected static User mapUser(ResultSet rs, int rowNum) throws SQLException {
         var user = new User();
 
@@ -238,6 +252,13 @@ public class LibraryDAO {
         return book;
     }
 
+    /**
+     * Gets an integer value from a result set.
+     * @param rs  the result set from which to extract the integer value
+     * @param col  which column of the result set to extract the value from
+     * @return  an integer value or null if there was no value
+     * @throws SQLException  thrown if we are unable to extract the value from the result set
+     */
     protected static Integer getIntOrNull(ResultSet rs, String col) throws SQLException {
         var value = rs.getInt(col);
         return rs.wasNull() ? null : value;
@@ -286,15 +307,27 @@ public class LibraryDAO {
         return jt.queryForList("select distinct tag from tags order by tag", String.class);
     }
 
-    public List<String> fetchAllEpubObjectIds() {
+    /**
+     * Returns a list of all the EPUBs in the library.
+     * @return  a list of EPUB object keys
+     */
+    public List<String> fetchAllEpubObjectKeys() {
         return jt.queryForList("select distinct epub_object_key from books where epub_object_key is not null order by epub_object_key", String.class);
     }
 
-    public List<String> fetchAllMobiObjectIds() {
+    /**
+     * Returns a list of all the MOBIs in the library.
+     * @return  a list of MOBI object keys
+     */
+    public List<String> fetchAllMobiObjectKeys() {
         return jt.queryForList("select distinct mobi_object_key from books where mobi_object_key is not null order by mobi_object_key", String.class);
     }
 
-    public List<String> fetchAllAudiobookObjectIds() {
+    /**
+     * Returns a list of all the audiobooks in the library.
+     * @return  a list of audiobook object keys
+     */
+    public List<String> fetchAllAudiobookObjectKeys() {
         return jt.queryForList("select distinct audiobook_object_key from books where audiobook_object_key is not null order by audiobook_object_key", String.class);
     }
 
@@ -315,18 +348,30 @@ public class LibraryDAO {
         return map;
     }
 
+    /**
+     * Returns the password reset token for the given user.
+     * @param userId  the id of the user whose token we're looking for
+     * @return  the user's password reset token
+     */
     public PasswordResetToken fetchPasswordResetTokenForUser(int userId) {
+
+        // search for password reset tokens for this user
         var tokens = jt.query("select token, creation_time from password_reset_tokens where user_id = ? order by creation_time desc limit 1", (rs, rowNum) -> {
+
+            // build a password reset token from the result set
             var token = new PasswordResetToken();
             token.setUserId(userId);
             token.setToken(rs.getString("token"));
             token.setCreationTime(rs.getTimestamp("creation_time"));
             return token;
+
         }, userId);
+
+        // return the token
         return tokens == null || tokens.size() <= 0 ? null : tokens.get(0);
     }
 
-    // WRITE ACCESS METHODS
+    // INSERT/UPDATE METHODS
 
     /**
      * Inserts a book into the database.
@@ -367,6 +412,11 @@ public class LibraryDAO {
         return bookId;
     }
 
+    /**
+     * Convert a java util date to a sql date without throwing a null pointer exception.
+     * @param date  a java util date object
+     * @return  a sql date
+     */
     protected java.sql.Date toSqlDate(Date date) {
         return date == null ? null : new java.sql.Date(date.getTime());
     }
@@ -395,6 +445,10 @@ public class LibraryDAO {
         }
     }
 
+    /**
+     * Update information about a book.
+     * @param book  an object with information about the book to be updated
+     */
     public void updateBook(Book book) {
         var sql = String.format("update books set %s where id = ?", updateSql(BOOK_COLS.class));
         jt.update(sql, book.getId(), book.getTitle(), book.getAuthor(), book.getAuthor2(), book.getAuthor3(),
@@ -403,20 +457,30 @@ public class LibraryDAO {
                 book.getAudiobookObjectKey(), book.getAmazonId(), book.getId());
     }
 
+    /**
+     * Insert a row into the password reset token table.  Before doing so,
+     * first delete any other tokens for this user.
+     * @param userId  the id of the user for whom we're storing this token
+     * @param token  the token value to save
+     */
     public void storePasswordResetToken(int userId, String token) {
         jt.update("delete from password_reset_tokens where user_id = ?", userId);
         jt.update("insert into password_reset_tokens (user_id, token, creation_time) values (?, ?, ?)", userId, token, new Date());
     }
 
+    /**
+     * Delete any password reset tokens for a given user.
+     * @param userId  the id of a user
+     */
     public void deletePasswordResetToken(int userId) {
         jt.update("delete from password_reset_tokens where user_id = ?", userId);
     }
 
     /**
-     * This is a sentence that should could be a grammatical error.
+     * Set a user's password.
      *
-     * @param userId
-     * @param password
+     * @param userId  the id of a user
+     * @param password  the user's new password
      */
     @Transactional
     public void setPassword(int userId, String password) {
@@ -456,6 +520,12 @@ public class LibraryDAO {
         return Arrays.stream(enumClass.getEnumConstants()).map(e -> tableId + "." + e.toString()).collect(Collectors.joining(","));
     }
 
+    /**
+     * Given an enumeration of columns, create the column assignment specification of an update
+     * statement.  Given an enumeration of A,B,C for example, generate A=?, B=?, C=?.
+     * @param enumClass  an enumeration of columns for a table
+     * @return  the sql to assign values to the columns
+     */
     protected static String updateSql(Class<? extends Enum<?>> enumClass) {
         return Arrays.stream(enumClass.getEnumConstants()).map(e -> e + " = ?").collect(Collectors.joining(","));
     }

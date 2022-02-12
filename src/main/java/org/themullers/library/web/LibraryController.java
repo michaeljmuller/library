@@ -13,6 +13,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import org.themullers.library.*;
 import org.themullers.library.db.LibraryDAO;
 import org.themullers.library.s3.LibraryOSAO;
+import org.themullers.library.web.forms.BookForm;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
@@ -22,7 +23,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@RestController
+/**
+ * This is the main controller for the Library application; it handles requests to display web
+ * pages after the user is authenticated.  API requests by JavaScript on those pages are handled
+ * by the RestAPIController.  The PasswordResetController contains the implementation pages to
+ * support the "I forgot my password" process.
+ */
+@RestController  // TODO: change this to a plain Controller (not REST) ?
 public class LibraryController {
 
     private Logger logger = LoggerFactory.getLogger(LibraryController.class);
@@ -178,6 +185,10 @@ public class LibraryController {
         return new RedirectView("/metadata");
     }
 
+    /**
+     * Display a page that lists all the tags that have been associated with books in the library.
+     * @return  a view object containing a reference to the template that should be used to render the tags page
+     */
     @GetMapping("/tags")
     public ModelAndView tags() {
         var mv = new LibraryModelAndView("tags");
@@ -185,6 +196,12 @@ public class LibraryController {
         return mv;
     }
 
+    /**
+     * Display the login page
+     * @param error  whether this page is being re-displayed in response to a failed login
+     * @param logout  whether this page is being displayed after a user logs out
+     * @return  a view object containing a reference to the template that should be used to render the login page
+     */
     @GetMapping("/login")
     public ModelAndView login(@RequestParam(value = "error", required = false) String error, @RequestParam(value = "logout", required = false) String logout) {
         var mv = new LibraryModelAndView("/login");
@@ -197,6 +214,13 @@ public class LibraryController {
         return mv;
     }
 
+    /**
+     * Downloads an EPUB.
+     *
+     * @param bookId  the id of the book whose EPUB should be downloaded
+     * @param response  the http response object that the EPUB will be written to
+     * @throws IOException  throws if an unexpected error occurs while downloading the EPUB
+     */
     @GetMapping(value = "/book/epub/{id}", produces = "application/epub+zip")
     public void getEpub(@PathVariable(value = "id") int bookId, HttpServletResponse response) throws IOException {
         var id = dao.fetchEpubObjectKey(bookId);
@@ -204,6 +228,13 @@ public class LibraryController {
         libUtils.writeS3ObjectToResponse(obj, response);
     }
 
+    /**
+     * Downloads an MOBI.
+     *
+     * @param bookId  the id of the book whose MOBI should be downloaded
+     * @param response  the http response object that the MOBI will be written to
+     * @throws IOException  throws if an unexpected error occurs while downloading the MOBI
+     */
     @GetMapping(value = "/book/mobi/{id}", produces = "application/epub+zip")
     public void getMobi(@PathVariable(value = "id") int bookId, HttpServletResponse response) throws IOException {
         var id = dao.fetchMobiObjectKey(bookId);
@@ -211,6 +242,13 @@ public class LibraryController {
         libUtils.writeS3ObjectToResponse(obj, response);
     }
 
+    /**
+     * Downloads an audiobook.
+     *
+     * @param bookId  the id of the book whose audiobook should be downloaded
+     * @param response  the http response object that the audiobook will be written to
+     * @throws IOException  throws if an unexpected error occurs while downloading the audiobook
+     */
     @GetMapping(value = "/book/m4b/{id}", produces = "audio/mp4a-latm")
     public void getAudiobook(@PathVariable(value = "id") int bookId, HttpServletResponse response) throws IOException {
         var id = dao.fetchAudiobookObjectKey(bookId);
@@ -218,36 +256,54 @@ public class LibraryController {
         libUtils.writeS3ObjectToResponse(obj, response);
     }
 
-    @GetMapping(value="/asset")
-    public ModelAndView uploadAsset() {
-        return new LibraryModelAndView("/upload-asset-form");
+    /**
+     * Displays the form that allows a user to add a book to the library.
+     * @param epubObjKey  the EPUB of the book that we're adding.
+     * @param httpReferrer  the page that sent the user to this form (so we can send them back when done)
+     * @return  a view object containing the template that should be used to render the "add book" page
+     * @throws IOException  thrown if an IO error occurs while we're trying to render this page
+     */
+    @GetMapping("/addBook")
+    public ModelAndView displayAddBookForm(@RequestParam("epub") String epubObjKey, @RequestHeader(value="Referer", required=false) String httpReferrer) throws IOException {
+
+        // add the EPUB (and the associated MOBI) to a new book
+        var book = new BookForm();
+        book.setEpubObjectKey(epubObjKey);
+        book.setMobiObjectKey(LibUtils.matchingMobi(epubObjKey));
+
+        // populate the model
+        var mv = new LibraryModelAndView("/edit-book-form");
+        mv.addObject("referrer", httpReferrer);
+        populateModelForEditBookPage(mv, book, false);
+
+        return mv;
     }
 
-    @PostMapping(value="/asset")
-    public void receiveAssetBinary(@RequestParam("file") MultipartFile file) throws IOException {
-        osao.uploadObject(file.getInputStream(), file.getSize(), file.getOriginalFilename());
-    }
-
-    @PostMapping(value="/uploadCover")
-    public void receiveCoverImage(@RequestParam("file") MultipartFile file, @RequestParam("bookId") int bookId) throws IOException {
-        bookImageCache.cacheUploadedCoverForBook(file.getOriginalFilename(), file.getInputStream(), bookId);
-    }
-
+    /**
+     * Displays a form allowing the user to edit a book's metadata.
+     * @param bookId  the id of the book to be edited
+     * @param httpReferrer  the page that sent the user to this form (so we can send them back when done)
+     * @return  a view object containing the template that should be used to render the "edit book" page
+     * @throws IOException  thrown if an IO error occurs while we're trying to render this page
+     */
     @GetMapping("/editBook/{id}")
     public ModelAndView editBookFormDisplay(@PathVariable("id") int bookId, @RequestHeader(value="Referer", required=false) String httpReferrer) throws IOException {
+
+        // populate the model
         var mv = new LibraryModelAndView("/edit-book-form");
         mv.addObject("referrer", httpReferrer);
         populateModelForEditBookPage(mv, dao.fetchBook(bookId), true);
+
         return mv;
     }
 
-    @GetMapping("/book/{id}")
-    public ModelAndView showBookDetails(@PathVariable("id") int bookId) {
-        var mv = new LibraryModelAndView("/book-details");
-        mv.addObject("book", dao.fetchBook(bookId));
-        return mv;
-    }
-
+    /**
+     * Populate the model used to render an add/edit book page.
+     * @param mv  the model/view object used to render the page
+     * @param book  the java object with information about the book
+     * @param isEdit  whether this model is for an edit operation (as opposed to an add operation)
+     * @throws IOException  thrown if an IO error occurs while we're trying to populate the model
+     */
     protected void populateModelForEditBookPage(ModelAndView mv, Book book, boolean isEdit) throws IOException {
 
         /*
@@ -257,7 +313,7 @@ public class LibraryController {
          */
 
         // get lists of object ids of each type that are not currently attached to any books in the database
-        var objIds = libUtils.fetchUnattachedObjectIds();
+        var objIds = libUtils.fetchUnattachedObjectKeys();
         var epubs = objIds.stream().filter(o -> o.toLowerCase().endsWith("epub")).collect(Collectors.toList());
         var mobis = objIds.stream().filter(o -> o.toLowerCase().endsWith("mobi")).collect(Collectors.toList());
         var audiobooks = objIds.stream().filter(o -> o.toLowerCase().endsWith("m4b")).collect(Collectors.toList());
@@ -282,6 +338,11 @@ public class LibraryController {
         mv.addObject("formAction", isEdit ? "/api/book/" + book.getId() : "/api/book");
     }
 
+    /**
+     * Adds an asset to a list and then alphabetizes the list.
+     * @param asset  the asset to add to the list
+     * @param listOfAssets  the list of assets
+     */
     protected void addToList(String asset, List<String> listOfAssets) {
         if (asset != null) {
             listOfAssets.add(asset);
@@ -290,31 +351,50 @@ public class LibraryController {
     }
 
     /**
-     * Gets candidate images for an ebook.
+     * Renders a page with detailed information about a book.
+     * @param bookId  the id of the book to display.
+     * @return  a view object containing the template that should be used to render the "book details" page
      */
-    @GetMapping("/coverImages")
-    public ModelAndView displayCoverImagesForBook(@RequestParam("epubObjId") String epubObjId) throws IOException {
-        var mv = new LibraryModelAndView("/cover-images-div");
-        mv.addObject("images", bookImageCache.imagesFromBook(epubObjId));
-        mv.addObject("epubObjId", epubObjId);
+    @GetMapping("/book/{id}")
+    public ModelAndView showBookDetails(@PathVariable("id") int bookId) {
+        var mv = new LibraryModelAndView("/book-details");
+        mv.addObject("book", dao.fetchBook(bookId));
         return mv;
     }
 
+    /**
+     * Returns the binary content of an image from an EPUB.
+     * @param epubObjKey  the S3 object key of the EPUB
+     * @param imageFilename  the filename of the image in the EPUB
+     * @return  the image binary
+     * @throws FileNotFoundException  thrown if the requested image can't be found in the EPUB
+     */
     @GetMapping("/epubImage")
-    public Resource getImageFromBook(@RequestParam("objId") String epubObjId, @RequestParam("file") String filename) throws FileNotFoundException {
-        return new InputStreamResource(new FileInputStream(bookImageCache.getBookImageFromCache(epubObjId, filename)));
+    public Resource getImageFromBook(@RequestParam("epubObjKey") String epubObjKey, @RequestParam("file") String imageFilename) throws FileNotFoundException {
+        return new InputStreamResource(new FileInputStream(bookImageCache.getEpubBookImageFromCache(epubObjKey, imageFilename)));
     }
 
+    /**
+     * Returns the binary content of an uploaded cover image.
+     * @param bookId  the id of the book for which this image was uploaded
+     * @param filename  the filename of the uploaded image
+     * @return  the image binary
+     * @throws FileNotFoundException  thrown if the requested image can't be found
+     */
     @GetMapping(value="/uploadedImage")
     public Resource getUploadedImage(@RequestParam("bookId") int bookId, @RequestParam("file") String filename) throws FileNotFoundException {
-        return new InputStreamResource(new FileInputStream(bookImageCache.getUploadedBookFromCache(bookId, filename)));
+        return new InputStreamResource(new FileInputStream(bookImageCache.getUploadedBookImageFromCache(bookId, filename)));
     }
 
+    /**
+     * Displays a page with information about assets that have been uploaded, but not yet added to the library.
+     * @return  a view object containing the template that should be used to render the "new assets" page
+     */
     @GetMapping("/admin/newAssets")
     public ModelAndView newAssets() {
 
         // get lists of object ids of each type that are not currently attached to any books in the database
-        var objIds = libUtils.fetchUnattachedObjectIds();
+        var objIds = libUtils.fetchUnattachedObjectKeys();
         var epubs = objIds.stream().filter(o -> o.toLowerCase().endsWith(".epub")).collect(Collectors.toList());
         var mobis = objIds.stream().filter(o -> o.toLowerCase().endsWith(".mobi")).collect(Collectors.toList());
         var audiobooks = objIds.stream().filter(o -> o.toLowerCase().endsWith(".m4b")).collect(Collectors.toList());
@@ -329,20 +409,4 @@ public class LibraryController {
         mv.addObject("books", titlesAndAuthors);
         return mv;
     }
-
-    @GetMapping("/addBook")
-    public ModelAndView displayAddBookForm(@RequestParam("epub") String epubObjKey) throws IOException {
-
-        var mv = new LibraryModelAndView("/edit-book-form");
-
-        var mobiObjectKey = LibUtils.matchingMobi(epubObjKey);
-
-        var book = new BookForm();
-        book.setEpubObjectKey(epubObjKey);
-        book.setMobiObjectKey(mobiObjectKey);
-        populateModelForEditBookPage(mv, book, false);
-
-        return mv;
-    }
-
 }

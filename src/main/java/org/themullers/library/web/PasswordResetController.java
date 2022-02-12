@@ -15,6 +15,15 @@ import org.themullers.library.auth.pwreset.PasswordResetService;
 import javax.mail.MessagingException;
 import java.io.IOException;
 
+/**
+ * Handles requests from the user related to resetting a forgotten password.
+ *
+ * The process flow goes like this:  User clicks "I forgot my pw" link on the login page,
+ * system displays form where they can enter their email.  User submits email, system
+ * sends them an email and displays the "check your email" page.  User clicks a link
+ * in the email, system resets the password and displays a page saying "make a note
+ * of your new password and then use it to log in".
+ */
 @RestController
 public class PasswordResetController {
 
@@ -25,6 +34,11 @@ public class PasswordResetController {
         this.pwReset = pwReset;
     }
 
+    /**
+     * Prompts the user to enter their email so we can send them their password.
+     * @param msg  an optional message to be displayed on top of the page
+     * @return  a view object containing the template that should be used to render the "book details" page
+     */
     @GetMapping("/pw-reset")
     public ModelAndView displayPasswordResetForm(@RequestParam(value="msg", required=false) String msg) {
         var mv = new ModelAndView("password-reset");
@@ -32,6 +46,17 @@ public class PasswordResetController {
         return mv;
     }
 
+    /**
+     * Process the submitted "I forgot my email" form.
+     * If the user enters a valid email address, they are redirected to the "password
+     * reset email has been sent" page.  Otherwise, this page is rendered again
+     * with an error message on top.
+     * @param email  the email address that was entered in the form
+     * @return  a redirect or the view for this page
+     * @throws TemplateException  if an unexpected error occurs processing the template for the email
+     * @throws MessagingException  if an unexpected email error occurs sending the email
+     * @throws IOException  if an unexpected IO error occurs sending the email
+     */
     @PostMapping("/pw-reset")
     public ModelAndView processPasswordResetForm(@RequestParam("email") String email) throws TemplateException, MessagingException, IOException {
 
@@ -46,11 +71,23 @@ public class PasswordResetController {
         return new ModelAndView("redirect:/pw-reset-email-sent");
     }
 
+    /**
+     * Renders a page informing the user that we've sent them an email
+     * with a link they can use to reset their email.
+     * @return  a view object containing the template that should be used to render the "check your email" page
+     */
     @GetMapping("/pw-reset-email-sent")
     public ModelAndView checkEmailNotification() {
         return new ModelAndView("/check-email");
     }
 
+    /**
+     * This page is rendered when the user clicks a link in their email to reset
+     * their password; it generates a new password and displays that password to the user.
+     * @param userId  the id of the user for whom we should generate a new password
+     * @param token  a token that we sent to the user's email
+     * @return  a view object containing the template that should be used to render the "your email has been reset" page
+     */
     @GetMapping("/pw-reset-process-token")
     public ModelAndView processPasswordResetToken(@RequestParam("userid") int userId, @RequestParam("token") String token) {
 

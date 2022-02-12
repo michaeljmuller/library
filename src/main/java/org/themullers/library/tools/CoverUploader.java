@@ -5,6 +5,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 
+/**
+ * Uploads cover images from the Calibre repository to the library database for
+ * books that are missing cover images.
+ */
 public class CoverUploader extends CommandLineTool {
 
     public void uploadCovers() throws IOException {

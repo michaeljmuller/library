@@ -14,6 +14,10 @@ import java.util.List;
 
 // NOTE: to resize -- https://www.baeldung.com/java-resize-image
 
+/**
+ * A cache of book images, stored on the file system either after being uploaded
+ * or extracted from an EPUB.
+ */
 @Service
 public class BookImageCache {
 
@@ -101,6 +105,13 @@ public class BookImageCache {
         return images;
     }
 
+    /**
+     * Add an uploaded cover image to the cache.
+     * @param filename  a filename for the uploaded image
+     * @param is  the binary content of the uploaded image
+     * @param bookId  the id of the book that this image is a cover for
+     * @throws IOException  thrown if an unexpected error occurred while uploading the cover image
+     */
     public void cacheUploadedCoverForBook(String filename, InputStream is, int bookId) throws IOException {
 
         // make a subdirectory for uploaded covers for this book (if it doesn't already exist)
@@ -115,29 +126,27 @@ public class BookImageCache {
         }
     }
 
-    protected String prependDimensionsToFilename(Dimensions dimensions, String originalFilename) {
-        return String.format("%dx%d-%s", dimensions.w, dimensions.h, originalFilename);
-    }
-
-    protected record Dimensions(int w, int h) {
-    }
-
-    protected Dimensions getImageDimensions(byte[] imageBytes) throws IOException {
-        try (var is = new ByteArrayInputStream(imageBytes)) {
-            var img = ImageIO.read(is);
-            return new Dimensions(img.getWidth(), img.getHeight());
-        }
-    }
-
-    public File getBookImageFromCache(String epubObjId, String imageFilename) {
-        var bookDir = new File(imageCacheDir, epubObjId);
+    /**
+     * Finds a file in the filesystem cache of cover images extracted from EPUBs.
+     * @param epubObjKey  the object key for the EPUB whose cover image we're looking for
+     * @param imageFilename  the filename of the image to return
+     * @return  a file with the cover image (or null if not found)
+     */
+    public File getEpubBookImageFromCache(String epubObjKey, String imageFilename) {
+        var bookDir = new File(imageCacheDir, epubObjKey);
         if (!bookDir.exists() || !bookDir.isDirectory()) {
             return null;
         }
         return new File(bookDir, imageFilename);
     }
 
-    public File getUploadedBookFromCache(int bookId, String imageFilename) {
+    /**
+     * Finds a file in the filesystem cache of cover images uploaded for a book.
+     * @param bookId  the id of the book whose cover we're searching for
+     * @param imageFilename  filename of the cover image we're looking for
+     * @return  a file with the cover image (or null if not found)
+     */
+    public File getUploadedBookImageFromCache(int bookId, String imageFilename) {
         var bookDir = new File(imageCacheDir, Integer.toString(bookId));
         if (!bookDir.exists() || !bookDir.isDirectory()) {
             return null;
@@ -145,11 +154,32 @@ public class BookImageCache {
         return new File(bookDir, imageFilename);
     }
 
+    // HELPER METHODS
+
+    // get the filename (the last element) of a path
     protected String filename(String pathString) {
         return Path.of(pathString).getFileName().toString();
     }
 
+    // is this file an image?
     protected boolean isImage(String filename) {
         return IMAGE_EXTENSIONS.contains(Utils.getExtension(filename));
+    }
+
+    // calculate an alternate filename that has some dimensions pre-pended to the filename
+    protected String prependDimensionsToFilename(Dimensions dimensions, String originalFilename) {
+        return String.format("%dx%d-%s", dimensions.w, dimensions.h, originalFilename);
+    }
+
+    // calculate the dimensions for an image
+    protected Dimensions getImageDimensions(byte[] imageBytes) throws IOException {
+        try (var is = new ByteArrayInputStream(imageBytes)) {
+            var img = ImageIO.read(is);
+            return new Dimensions(img.getWidth(), img.getHeight());
+        }
+    }
+
+    // structure to represent image dimensions
+    protected record Dimensions(int w, int h) {
     }
 }

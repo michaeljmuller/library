@@ -19,14 +19,11 @@ function initializeDropzone(bookId, csrfParameterName, csrfToken) {
 
     // create the dropzone
     let myDropzone = new Dropzone("div#dz", {
-        url: '/uploadCover',
+        url: '/api/book/cover/' + bookId,
         method: 'post',
         chunking: true,
         init: function() {
             this.on("sending", function (file, xhr, formData) {
-
-                // include the book id with form post
-                formData.append("bookId", bookId);
 
                 // include CSRF token (if provided)
                 if (csrfParameterName != null && csrfToken != null) {

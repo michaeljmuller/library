@@ -1,5 +1,8 @@
 package org.themullers.library.email;
 
+/**
+ * Represents an email that will be sent by the library application.
+ */
 public class Email {
     String from;
     String to;

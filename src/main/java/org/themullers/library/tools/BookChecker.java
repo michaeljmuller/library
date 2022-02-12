@@ -3,6 +3,9 @@ package org.themullers.library.tools;
 import java.io.IOException;
 import java.sql.SQLException;
 
+/**
+ * Finds books that don't have a MOBI.
+ */
 public class BookChecker extends CommandLineTool {
 
     public void execute() throws Exception {

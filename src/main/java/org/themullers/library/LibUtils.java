@@ -12,8 +12,22 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Helper functions used in a variety of places in the implementation of the library.
+ */
 @Component
 public class LibUtils {
+
+    public static final Map<String, String> MIME_TYPES = Map.of(
+            "epub", "application/epub+zip",
+            "mobi", "application/x-mobipocket-ebook",
+            "m4b", "audio/mp4a-latm",
+            "jpg", "image/jpeg",
+            "jpeg", "image/jpeg",
+            "png", "image/png",
+            "gif", "image/gif",
+            "svg", "image/svg+xml"
+    );
 
     public final static String STANDALONE = "Standalone";
 
@@ -66,35 +80,19 @@ public class LibUtils {
     }
 
     /**
-     * determine a file's mime type based on its extension
+     * Determine a file's mime type based on its extension.
      *
      * @param filename a filename
      * @return the mime type
      */
     public String mimeTypeForFile(String filename) {
 
-        var lcFilename = filename.toLowerCase();
-
-        if (lcFilename.endsWith(".epub")) {
-            return "application/epub+zip";
-        }
-        else if (lcFilename.endsWith(".mobi")) {
-            return "application/x-mobipocket-ebook";
-        }
-        else if (lcFilename.endsWith(".m4b")) {
-            return "audio/mp4a-latm";
-        }
-        else if (lcFilename.endsWith(".jpg") || lcFilename.endsWith(".jpeg")) {
-            return "image/jpeg";
-        }
-        else if (lcFilename.endsWith(".png")) {
-            return "image/png";
-        }
-        else if (lcFilename.endsWith(".gif")) {
-            return "image/gif";
-        }
-        else if (lcFilename.endsWith(".svg")) {
-            return "image/svg+xml";
+        var ext = Utils.getExtension(filename);
+        if (ext != null) {
+            var mimeType =  MIME_TYPES.get(ext);
+            if (mimeType != null) {
+                return mimeType;
+            }
         }
 
         throw new RuntimeException("can't determine mime type for file " + filename);
@@ -130,14 +128,18 @@ public class LibUtils {
         response.flushBuffer();
     }
 
-    public List<String> fetchUnattachedObjectIds() {
+    /**
+     * Find object keys for assets that are not currently associated with a book.
+     * @return  a list of object keys
+     */
+    public List<String> fetchUnattachedObjectKeys() {
 
         var unattachedObjectIds = new LinkedList<String>();
 
         // get a list of the object IDs that are attached to books in the database
-        var attachedEpubs = dao.fetchAllEpubObjectIds();
-        var attachedMobis = dao.fetchAllMobiObjectIds();
-        var attachedAudiobooks = dao.fetchAllAudiobookObjectIds();
+        var attachedEpubs = dao.fetchAllEpubObjectKeys();
+        var attachedMobis = dao.fetchAllMobiObjectKeys();
+        var attachedAudiobooks = dao.fetchAllAudiobookObjectKeys();
 
         // for each asset in the object store
         for (var objId : osao.listObjects()) {
@@ -153,11 +155,23 @@ public class LibUtils {
         return unattachedObjectIds;
     }
 
+    /**
+     * Given an EPUB object key, calculate what the key would be for a MOBI for the same book.
+     * @param epub  the object key for an EPUB
+     * @return  the object key for a MOBI that may or may not exist (or null if a MOBI key could not be calculated)
+     */
     public static String matchingMobi(String epub) {
+
         String mobi = null;
+
+        // if an epub key was passed in
         if (epub != null) {
+
+            // if the epub ended as expected with ".epub"
             var lcEpub = epub.toLowerCase();
             if (lcEpub.endsWith(".epub")) {
+
+                // find the same filename, but ending in ".mobi"
                 var base = epub.substring(0, lcEpub.length() - 5);
                 mobi = base + ".mobi";
             }

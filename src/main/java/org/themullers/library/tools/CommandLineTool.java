@@ -13,6 +13,12 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
+/**
+ * This is an abstract base class for command line tools that support the library.
+ * It provides a non-springy connection to the database and object store.
+ * It also turns down the the default logging so you (mostly) only see messages
+ * from the command-line app.
+ */
 public abstract class CommandLineTool {
 
     // this should really be a parameter or something, this is just a base class for one-offs anyway so...
@@ -23,15 +29,29 @@ public abstract class CommandLineTool {
     protected LibraryDAO dao;
     protected LibraryOSAO osao;
 
+    // constructor
     public CommandLineTool() throws IOException, SQLException {
+
+        // create a logger for use by this object
         this.logger = (Logger) org.slf4j.LoggerFactory.getLogger(CommandLineTool.class);
+
+        // set the default logging level to ERROR and log level for this class to INFO
         setDefaultLogLevel(Level.ERROR);
         setLogLevel(Level.INFO);
+
+        // parse the config file so we know the endpoints and credentials for our DB and object store
         this.config = getConfig();
+
+        // get access objects for the DB and object store
         dao = makeDao(config);
         osao = makeOsao(config);
     }
 
+    /**
+     * Parse the application's configuration file.
+     * @return  the application's configuration info
+     * @throws IOException  thrown if an unexpeted error occurs parsing the config file
+     */
     protected Properties getConfig() throws IOException {
         var config = new Properties();
         try (var reader = new FileReader(CONFIG_FILE_LOCATION)) {
@@ -40,15 +60,29 @@ public abstract class CommandLineTool {
         return config;
     }
 
+    /**
+     * Set the default log level (for messages logged outside of this class).
+     * @param level  the desired default log level
+     */
     protected void setDefaultLogLevel(Level level) {
         var root = (Logger) org.slf4j.LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         root.setLevel(level);
     }
 
+    /**
+     * Set the log level for this class.
+     * @param level
+     */
     protected void setLogLevel(Level level) {
         logger.setLevel(level);
     }
 
+    /**
+     * Create an object for use accessing the database.
+     * @param config  the application config file with endpoint info and credentials
+     * @return  a database access object
+     * @throws SQLException  thrown if an unexpected error occurs connecting to the database
+     */
     protected LibraryDAO makeDao(Properties config) throws SQLException {
 
         // get connection info from config file
@@ -65,6 +99,11 @@ public abstract class CommandLineTool {
         return new LibraryDAO(jt);
     }
 
+    /**
+     * Create an object for use accessing the object store.
+     * @param config  the application config file with endpoint info and credentials
+     * @return  an object store access object
+     */
     protected LibraryOSAO makeOsao(Properties config) {
 
         var osao = new LibraryOSAO();

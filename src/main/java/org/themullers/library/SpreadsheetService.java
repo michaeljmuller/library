@@ -19,6 +19,11 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * This service provides the ability to download metadata for all the library's books
+ * into a single Excel spreadsheet and then upload revisions to the metadata back into
+ * the library.
+ */
 @Service
 public class SpreadsheetService {
 
@@ -36,6 +41,67 @@ public class SpreadsheetService {
     // this is m/d/yy according to https://poi.apache.org/apidocs/dev/org/apache/poi/ss/usermodel/BuiltinFormats.html
     public static final short EXCEL_BUILTIN_MDY_FORMAT = 0xe;
 
+    /**
+     * Download an Excel spreadsheet containing all the metadata about all the books in the library.
+     * @return the binary content of the spreadsheet
+     * @throws IOException  thrown if an unexpected error occurs creating or transferring the spreadsheet
+     */
+    public byte[] download() throws IOException {
+        var books = dao.fetchAllBooks();
+        var objects = osao.listObjects();
+        var dbEbooks = new LinkedList<String>();
+        var dbAudiobooks = new LinkedList<String>();
+
+        var wb = XSSFWorkbookFactory.createWorkbook();
+        var sheet = wb.createSheet(SHEET_NAME);
+        var audioSheet = wb.createSheet(SHEET_NEW_AUDIOBOOKS);
+
+        // make the text larger for my geriatric eyeballs
+        sheet.setZoom(150);
+        audioSheet.setZoom(150);
+
+        // create a header row
+        var header = sheet.createRow(0);
+        for (var column : Column.values()) {
+            header.createCell(column.getNumber()).setCellValue(column.getHeader());
+        }
+
+        // create a bold font
+        var newFont = wb.createFont();
+        newFont.setBold(true);
+
+        // make each header cell bold
+        for (var column : Column.values()) {
+            var cell = header.getCell(column.getNumber());
+            var style = cell.getCellStyle().copy();
+            style.setFont(newFont);
+            cell.setCellStyle(style);
+        }
+
+        // write each book that we found in the database to the spreadsheet
+        int rowNum = 1;
+        for (var book : books) {
+            writeBookToSpreadsheet(book, sheet, rowNum++);
+            addToList(book.getEpubObjectKey(), dbEbooks);
+            addToList(book.getAudiobookObjectKey(), dbAudiobooks);
+        }
+
+        // resize the columns to fit the content
+        for (var column : Column.values()) {
+            sheet.autoSizeColumn(column.getNumber());
+        }
+
+        // freeze the header row
+        sheet.createFreezePane(0,1);
+
+        return bytesForWorkbook(wb);
+    }
+
+    /**
+     * Update metadata about books in the library from an Excel spreadsheet.
+     * @param spreadsheet  the binary content of the spreadsheet
+     * @throws IOException  thrown if an unexpected error occurs during the upload or parsing of the spreadsheet
+     */
     public void upload(byte[] spreadsheet) throws IOException {
 
         // get all the books from the database, indexed by book id
@@ -97,6 +163,13 @@ public class SpreadsheetService {
         }
     }
 
+    // HELPER METHODS AND CLASSES BELOW HERE
+
+    /**
+     * Parse a row in the spreadsheet into a Book object.
+     * @param row  the row of the spreadsheet to convert to a java object
+     * @return  a Book object
+     */
     protected static Book createBookFromSpreadsheet(BookRow row) {
 
         var book = new Book();
@@ -131,63 +204,24 @@ public class SpreadsheetService {
         return book;
     }
 
-    public byte[] download() throws IOException {
-        var books = dao.fetchAllBooks();
-        var objects = osao.listObjects();
-        var dbEbooks = new LinkedList<String>();
-        var dbAudiobooks = new LinkedList<String>();
-
-        var wb = XSSFWorkbookFactory.createWorkbook();
-        var sheet = wb.createSheet(SHEET_NAME);
-        var audioSheet = wb.createSheet(SHEET_NEW_AUDIOBOOKS);
-
-        // make the text larger for my geriatric eyeballs
-        sheet.setZoom(150);
-        audioSheet.setZoom(150);
-
-        // create a header row
-        var header = sheet.createRow(0);
-        for (var column : Column.values()) {
-            header.createCell(column.getNumber()).setCellValue(column.getHeader());
-        }
-
-        // create a bold font
-        var newFont = wb.createFont();
-        newFont.setBold(true);
-
-        // make each header cell bold
-        for (var column : Column.values()) {
-            var cell = header.getCell(column.getNumber());
-            var style = cell.getCellStyle().copy();
-            style.setFont(newFont);
-            cell.setCellStyle(style);
-        }
-
-        // write each book that we found in the database to the spreadsheet
-        int rowNum = 1;
-        for (var book : books) {
-            writeBookToSpreadsheet(book, sheet, rowNum++);
-            addToList(book.getEpubObjectKey(), dbEbooks);
-            addToList(book.getAudiobookObjectKey(), dbAudiobooks);
-        }
-
-        // resize the columns to fit the content
-        for (var column : Column.values()) {
-            sheet.autoSizeColumn(column.getNumber());
-        }
-
-        // freeze the header row
-        sheet.createFreezePane(0,1);
-
-        return bytesForWorkbook(wb);
-    }
-
+    /**
+     * Adds an item to a list, checking first to make sure it's not null and not already in the list.
+     * TODO: use a set instead of a list?
+     * @param item  the item to add to the list
+     * @param list  the list to add the item to
+     */
     protected void addToList(String item, List<String> list) {
         if (item != null && !list.contains(item)) {
             list.add(item);
         }
     }
 
+    /**
+     * Creates a new row in a spreadsheet containing information about a book.
+     * @param book  the book with information to be written to the spreadsheet
+     * @param sheet  the sheet within the workbook to write to
+     * @param rowNum  which row to write the book information to
+     */
     protected void writeBookToSpreadsheet(Book book, XSSFSheet sheet, int rowNum) {
         var row = new BookRow(sheet.createRow(rowNum));
         row.setValue(Column.DBID, book.getId());
@@ -217,6 +251,12 @@ public class SpreadsheetService {
         row.setValue(Column.ASIN, book.getAmazonId());
     }
 
+    /**
+     * Writes an Excel spreadsheet (workbook) to a byte array.
+     * @param wb  the spreadsheet to write
+     * @return  a byte array representing the binary content of the spreadsheet
+     * @throws IOException
+     */
     static byte[] bytesForWorkbook(XSSFWorkbook wb) throws IOException {
 
         byte bytes[];
@@ -229,42 +269,56 @@ public class SpreadsheetService {
         return bytes;
     }
 
+    /**
+     * Structure representing a row of a spreadsheet.
+     */
     static class BookRow {
         private XSSFRow row;
         public BookRow(XSSFRow row) {
             this.row = row;
         }
 
+        // get the integer value of a cell (or zero, if the cell is not numeric)
         protected int getIntValue(Column column) {
             var cell = row.getCell(column.getNumber());
             return cell == null || cell.getCellType() != CellType.NUMERIC ? 0 : (int) cell.getNumericCellValue();
         }
 
+        // set the value of a cell to an integer value
         protected void setValue(Column column, int value) {
             row.createCell(column.getNumber()).setCellValue(value);
         }
 
+        // get the string value of a cell (or null if the cell is an empty string or has no value)
         protected String getStringValue(Column column) {
+
+            // get the cell
             var cell = row.getCell(column.getNumber());
             if (cell == null) {
                 return null;
             }
+
+            // check to see if the cell has no content
             var stringValue = cell.getStringCellValue();
             if (stringValue == null || stringValue.trim().length() == 0) {
                 return null;
             }
+
             return stringValue;
         }
 
+        // set the value of a cell to a string value
         protected void setValue(Column column, String value) {
             row.createCell(column.getNumber()).setCellValue(value);
         }
 
+        // get a date value from a cell
         protected Date getDateValue(Column column) {
             var cell = row.getCell(column.getNumber());
             return cell == null ? null : cell.getDateCellValue();
         }
 
+        // set a cell to a date value
         protected void setValue(Column column, Date value) {
             var cell = row.createCell(column.getNumber());
             cell.setCellValue(value);
@@ -275,10 +329,12 @@ public class SpreadsheetService {
             cell.setCellStyle(style);
         }
 
+        // is this a header row?  (the first row in the spreadsheet)
         protected boolean isHeader() {
             return row.getRowNum() == 0;
         }
 
+        // is this a blank row?
         // from https://stackoverflow.com/a/28451783
         protected boolean isBlank() {
             if (row == null) {
@@ -309,6 +365,9 @@ public class SpreadsheetService {
         }
     }
 
+    /**
+     * This structure represents a column of the metadata spreadsheet.
+     */
     public enum Column {
         DBID(0, "dbid"),
         TITLE(1, "Title"),

@@ -3,6 +3,9 @@ package org.themullers.library.tools;
 import java.io.IOException;
 import java.sql.SQLException;
 
+/**
+ * Finds assets (not AZW3s) that aren't associated with any books in the library.
+ */
 public class AssetChecker extends CommandLineTool {
 
     public void checkAssets() throws Exception {

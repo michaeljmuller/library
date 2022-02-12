@@ -1,5 +1,8 @@
 package org.themullers.library;
 
+/**
+ * A simple bean representing user of the library.
+ */
 public class User {
     protected int id;
     protected String email;
