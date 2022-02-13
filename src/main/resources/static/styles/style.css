@@ -21,6 +21,7 @@ body {
     font-weight: bold;
     background-color: lightgrey;
     padding: 5px;
+    padding-left: 1em;
     margin-bottom: 15px;
     margin-top: 30px;
 }
@@ -66,9 +67,10 @@ div.morebooks {
     text-align: right;
     white-space: nowrap;
     padding-right: 2em;
+    padding-bottom: 2em;
 }
 
-a.morebooks {
+div.morebooks a {
     text-decoration: none;
 }
 
@@ -78,6 +80,10 @@ a:link {
 
 a:visited {
     color: black;
+}
+
+.stats {
+    padding-bottom: 1em;
 }
 
 /* RESPONSIVE LAYOUT FOR BOOKS */

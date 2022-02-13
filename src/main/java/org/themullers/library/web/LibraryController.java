@@ -51,20 +51,19 @@ public class LibraryController {
 
     /**
      * Handle a request to render the application's home page.
-     * The home page displays the most recently added books.
+     * The home page displays some statistics, a search area, and a few recently added books.
      *
-     * @param page can be a number > 1 to display more (older) books
-     * @return information needed to render the home page
+     * @return a view object containing the template needed to render the home page
      */
     @GetMapping("/")
-    public ModelAndView home(@RequestParam(name = "page", required = false, defaultValue = "1") int page) {
+    public ModelAndView home() {
         var mv = new LibraryModelAndView("home");
 
-        // get the most recent books
-        int booksPerPage = 6;
-        var newReleases = dao.fetchNewestBooks(booksPerPage, (page-1) * booksPerPage);
-        mv.addObject("page", page);
-        mv.addObject("books", newReleases);
+        mv.addObject("books", dao.fetchNewestBooks(6, 0));
+        mv.addObject("titleCount", dao.countTitles());
+        mv.addObject("audiobookCount", dao.countAudiobooks());
+        mv.addObject("authorCount", dao.countAuthors());
+
         return mv;
     }
 

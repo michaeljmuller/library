@@ -1,4 +1,4 @@
-<#macro page title additionalHeadContent="">
+<#macro page title additionalHeadContent="" tabTitle=title>
 <!DOCTYPE html>
 <#setting url_escaping_charset="UTF-8">
 <html lang="en">

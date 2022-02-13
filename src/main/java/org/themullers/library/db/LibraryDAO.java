@@ -62,11 +62,46 @@ public class LibraryDAO {
     }
 
     // QUERY METHODS
+
+    /**
+     * Count the number of titles in the library.
+     * @return  the number of titles in the library
+     */
+    public int countTitles() {
+        return jt.queryForObject("select count(*) from books", Integer.class);
+    }
+
+    /**
+     * Count the number of authors in the library.
+     * @return  the number of authors in the library
+     */
+    public int countAuthors() {
+        return jt.queryForObject("select count(distinct author) from books", Integer.class);
+    }
+
+    /**
+     * Count the number of audiobooks in the library.
+     * @return  the number of audiobooks in the library
+     */
+    public int countAudiobooks() {
+        return jt.queryForObject("select count(*) from books where books.audiobook_object_key is not null", Integer.class);
+    }
+
+    /**
+     * Find books where the title contains certain text.
+     * @param searchText  the text to search for
+     * @return  a list of books
+     */
     public List<Book> searchTitles(String searchText) {
         String sql = String.format("select %s, group_concat(t.tag separator ',') as tags from books a left outer join tags t on a.id = t.book_id where a.title like ? group by a.id", commaSeparated(BOOK_COLS.class, "a"));
         return jt.query(sql, LibraryDAO::mapBook, "%" + searchText + "%");
     }
 
+    /**
+     * Find authors matching certain text.
+     * @param searchText  the text to search for
+     * @return  a list of authors
+     */
     public List<String> searchAuthors(String searchText) {
         var wildcard = "%" + searchText + "%";
         var authors = jt.queryForList("select distinct author from books where author like ?", String.class, wildcard);
@@ -74,6 +109,11 @@ public class LibraryDAO {
         return authors;
     }
 
+    /**
+     * Find series matching certain text.
+     * @param searchText  the text to search for
+     * @return  a map of series referencing a list of authors that wrote books in the series
+     */
     public Map<String, List<String>> searchSeries(String searchText) {
         return jt.query("select distinct series, author from books where series like ?", rs -> {
 
