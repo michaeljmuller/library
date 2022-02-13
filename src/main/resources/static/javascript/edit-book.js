@@ -84,8 +84,9 @@ function insertNewCover(bookId, file) {
     img.setAttribute("src", "/uploadedImage?bookId=" + bookId + "&file=" + encodeURIComponent(file.name));
     divCoverImageLabel.setAttribute("class", "coverImageLabel");
     inputRadio.setAttribute("type", "radio");
-    inputRadio.setAttribute("name", "selectedCoverImg");
+    inputRadio.setAttribute("name", "coverImage");
     inputRadio.setAttribute("id", "image" + nextImageNum);
+    inputRadio.setAttribute("value", file.name);
     labelAroundText.setAttribute("for", "image" + nextImageNum);
     labelAroundText.appendChild(document.createTextNode(file.name));
 

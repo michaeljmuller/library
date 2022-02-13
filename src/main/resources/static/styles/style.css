@@ -61,12 +61,15 @@ input.search {
     background-color: #f0f0f0;
 }
 
-.morebooks {
-    text-decoration: none;
+div.morebooks {
     font-weight: bold;
     text-align: right;
     white-space: nowrap;
     padding-right: 2em;
+}
+
+a.morebooks {
+    text-decoration: none;
 }
 
 a:link {

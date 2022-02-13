@@ -4,10 +4,9 @@ TO DO:
 - add stats on main page
 - implement audiobook filter
 - implement book upload
-- resize image books (smaller for faster load)
+- resize image books (smaller for faster page load)
 - display multiple authors on book card
 - freeze header, scroll stuff below
-- search
 - sort authors by last name
 - find a better way of handling new DB entries (than appending them to the end of metadata ss)
 - some unauthenticated dialogs have no header-window-bar-title
@@ -16,10 +15,13 @@ TO DO:
 - implement "checkout"?
 - fix edit page to use ajax-form.js
 - add a cancel button to the edit book form
-- implement autocomplete in author 2 & 3
+- implement autocomplete in author 2 & 3 on add/edit book page
 - authors 2 and 3 really are second-class citizens; maybe can improve?
+- the whole book cover image cache thing is a mess, needs to be redesigned
+- BUG: picking auto-complete item with & inserts html-encoded &amp;
 
 DONE:
+- search
 - handle mobi
 - larger fonts for mobile
 - remove background image (super slow)

@@ -51,6 +51,11 @@
             }
         }
     </script>
+    <style>
+        input.book-picker {
+            width: 500px;
+        }
+    </style>
 </#assign>
 
 <@c.page title="New Assets" additionalHeadContent=hdr>
@@ -71,7 +76,7 @@
                 <#-- data-ajax-method is used by convertFormToAjax() to determine what method to use when submitting the form -->
                 <form class="asset-attacher" action="/api/asset/${mobi?url}" data-ajax-method="put">
                     <input type="hidden" name="assetIndex" value="mobi${mobi?index?c}" />
-                    <input id="picker${mobi?index?c}" class="book-picker" type="text" name="bookInfo" value="" />
+                    <input id="picker${mobi?index?c}" class="book-picker" type="text" name="bookInfo" value="" autocomplete="off" autocorrect="off" autocapitalize="off" />
                     <input type="submit" value="Update Book" />
                 </form>
             </li>
@@ -85,7 +90,7 @@
                 ${ab}
                 <form class="asset-attacher" action="/api/asset/${ab?url}" data-ajax-method="put">
                     <input type="hidden" name="assetIndex" value="ab${ab?index?c}" />
-                    <input id="ab-picker${ab?index?c}" class="book-picker" type="text" name="bookInfo" value="" />
+                    <input id="ab-picker${ab?index?c}" class="book-picker" type="text" name="bookInfo" value="" autocomplete="off" autocorrect="off" autocapitalize="off" />
                     <input type="submit" value="Update Book" />
                 </form>
             </li>

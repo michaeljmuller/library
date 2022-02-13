@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.themullers.library.Book;
 import org.themullers.library.BookImageCache;
 import org.themullers.library.LibUtils;
 import org.themullers.library.Utils;
@@ -53,28 +54,12 @@ public class RestAPIController {
 
                 // add the book to the library
                 var bookId = dao.insertBook(book);
+                book.setId(bookId);
 
                 // if the user picked a cover image for the book
                 var coverImageFilename = book.getCoverImage();
                 if (!Utils.isBlank(coverImageFilename)) {
-
-                    // look for the requested cover image in the cache of uploaded images
-                    var coverImageFile = bookImageCache.getUploadedBookImageFromCache(0, coverImageFilename);
-
-                    // if the cover image wasn't found there, look for the image in the cache of images from the EPUB
-                    if (coverImageFile == null) {
-                        coverImageFile = bookImageCache.getEpubBookImageFromCache(book.getEpubObjectKey(), coverImageFilename);
-                    }
-
-                    // if we found a cover image, add it to the database for this book
-                    if (coverImageFile != null) {
-                        dao.insertCoverImage(bookId, coverImageFilename, libUtils.mimeTypeForFile(coverImageFilename), Files.readAllBytes(coverImageFile.toPath()));
-                    }
-
-                    // if we didn't find a cover image, don't do anything other than log an error
-                    else {
-                        logger.error("cover image was specified when adding a book, but now we can't find it in the cover image cache; filename = " + coverImageFilename);
-                    }
+                    saveCoverImageForBook(book, coverImageFilename);
                 }
             }
             // if an exception is thrown, capture the reason and add it to the response for display to the user
@@ -113,17 +98,43 @@ public class RestAPIController {
                 // update the cover image, if it's been changed
                 var coverImageFilename = book.getCoverImage();
                 if (!Utils.isBlank(coverImageFilename) && !EXISTING_COVER_VALUE.equalsIgnoreCase(coverImageFilename)) {
-                    var coverImageFile = bookImageCache.getUploadedBookImageFromCache(0, coverImageFilename);
-                    dao.insertCoverImage(bookId, coverImageFilename, libUtils.mimeTypeForFile(coverImageFilename), Files.readAllBytes(coverImageFile.toPath()));
+                    saveCoverImageForBook(book, coverImageFilename);
                 }
             }
             catch (Exception x) {
-                v.addError("Exception thrown: " + x.getMessage());
+                v.addError("Exception thrown: " + x);
                 v.setSuccess(false);
                 logger.info("exception while validating form data", x);
             }
         }
         return v;
+    }
+
+    /**
+     * Saves a previously uploaded or extracted cover image to the database for a book.
+     * @param book  the book for which the cover image is to be uploaded
+     * @param coverImageFilename  the filename of the image to upload
+     * @throws IOException  thrown if an error occurs during the upload process
+     */
+    protected void saveCoverImageForBook(Book book, String coverImageFilename) throws IOException {
+
+        // look for the requested cover image in the cache of uploaded images
+        var coverImageFile = bookImageCache.getUploadedBookImageFromCache(0, coverImageFilename);
+
+        // if the cover image wasn't found there, look for the image in the cache of images from the EPUB
+        if (coverImageFile == null || !coverImageFile.exists()) {
+            coverImageFile = bookImageCache.getEpubBookImageFromCache(book.getEpubObjectKey(), coverImageFilename);
+        }
+
+        // if we found a cover image, add it to the database for this book
+        if (coverImageFile != null && coverImageFile.exists()) {
+            dao.insertCoverImage(book.getId(), coverImageFilename, libUtils.mimeTypeForFile(coverImageFilename), Files.readAllBytes(coverImageFile.toPath()));
+        }
+
+        // if we didn't find a cover image, don't do anything other than log an error
+        else {
+            logger.error("cover image was specified when adding a book, but now we can't find it in the cover image cache; filename = " + coverImageFilename);
+        }
     }
 
     /**

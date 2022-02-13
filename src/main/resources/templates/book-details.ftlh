@@ -55,7 +55,7 @@
                 <#if book.series??>
                     <div class="book-info-series">${book.series} #${book.seriesSequence!}</div>
                 </#if>
-                <div>${book.author}<#if book.author2??>, ${book.author2}</#if><#if book.author3??>, ${book.author3}</#if></div>
+                <div><a href="/author?name=${book.author?url}">${book.author}</a><#if book.author2??>, ${book.author2}</#if><#if book.author3??>, ${book.author3}</#if></div>
                 <div class="book-info-pub-year">${book.publicationYear?c}</div>
             </div>
             <#if book.getTags()?size gt 0>

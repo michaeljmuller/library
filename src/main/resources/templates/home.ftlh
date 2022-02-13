@@ -14,5 +14,5 @@
 
     <div class="section">Recently Added</div>
     <@b.books bookList=books></@b.books>
-    <div class="morebooks"><a href="/recents">More New Acquisitions &gt;&gt;</a></div>
+    <div class="morebooks"><a class="morebooks" href="/recents">More New Acquisitions &gt;&gt;</a></div>
 </@c.page>
