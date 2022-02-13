@@ -62,6 +62,45 @@ public class LibraryDAO {
     }
 
     // QUERY METHODS
+    public List<Book> searchTitles(String searchText) {
+        String sql = String.format("select %s, group_concat(t.tag separator ',') as tags from books a left outer join tags t on a.id = t.book_id where a.title like ? group by a.id", commaSeparated(BOOK_COLS.class, "a"));
+        return jt.query(sql, LibraryDAO::mapBook, "%" + searchText + "%");
+    }
+
+    public List<String> searchAuthors(String searchText) {
+        var wildcard = "%" + searchText + "%";
+        var authors = jt.queryForList("select distinct author from books where author like ?", String.class, wildcard);
+        Collections.sort(authors);
+        return authors;
+    }
+
+    public Map<String, List<String>> searchSeries(String searchText) {
+        return jt.query("select distinct series, author from books where series like ?", rs -> {
+
+            // create a map of series -> list of authors
+            var map = new HashMap<String, List<String>>();
+
+            // for each result
+            var hasMore = rs.first();
+            while (hasMore) {
+
+                // get the series and author
+                var series = rs.getString("series");
+                var author = rs.getString("author");
+
+                // make a list for the authors of this series (if it's not already there)
+                map.putIfAbsent(series, new LinkedList<String>());
+
+                // add the author to the list for this series
+                map.get(series).add(author);
+
+                // move to the next result
+                hasMore = rs.next();
+            }
+
+            return map;
+        }, "%" + searchText + "%");
+    }
 
     /**
      * Returns a boolean indicating whether a book has a cover image uploaded.

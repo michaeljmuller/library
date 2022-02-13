@@ -435,4 +435,18 @@ public class LibraryController {
 
         return mv;
     }
+
+    @GetMapping("/search")
+    public ModelAndView search(@RequestParam(value= "for", required=false) String searchText) {
+        var mv = new LibraryModelAndView("/search");
+
+        if (!Utils.isBlank(searchText)) {
+            mv.addObject("searchText", searchText);
+            mv.addObject("titles", dao.searchTitles(searchText));
+            mv.addObject("authors", dao.searchAuthors(searchText));
+            mv.addObject("seriesMap", dao.searchSeries(searchText));
+        }
+
+        return mv;
+    }
 }

@@ -1,4 +1,5 @@
 TO DO:
+- cover upload not working
 - series not displaying in order (only for lois mm bujold?)
 - add stats on main page
 - implement audiobook filter
@@ -16,6 +17,7 @@ TO DO:
 - fix edit page to use ajax-form.js
 - add a cancel button to the edit book form
 - implement autocomplete in author 2 & 3
+- authors 2 and 3 really are second-class citizens; maybe can improve?
 
 DONE:
 - handle mobi
