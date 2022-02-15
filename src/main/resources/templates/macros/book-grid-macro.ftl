@@ -22,6 +22,9 @@
                                 </div>
                             </#if>
                             <div class="book-info-acq-date">Added ${book.acquisitionDate}</div>
+                            <#if book.audiobookObjectKey??>
+                                <img class="audiobook-indicator" src="/images/audiobook.png" title="Audiobook is available for this title">
+                            </#if>
                         </div>
                     </div>
                 </div>

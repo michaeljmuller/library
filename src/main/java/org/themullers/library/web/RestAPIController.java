@@ -119,7 +119,7 @@ public class RestAPIController {
     protected void saveCoverImageForBook(Book book, String coverImageFilename) throws IOException {
 
         // look for the requested cover image in the cache of uploaded images
-        var coverImageFile = bookImageCache.getUploadedBookImageFromCache(0, coverImageFilename);
+        var coverImageFile = bookImageCache.getUploadedBookImageFromCache(book.getId() == null ? 0 : book.getId(), coverImageFilename);
 
         // if the cover image wasn't found there, look for the image in the cache of images from the EPUB
         if (coverImageFile == null || !coverImageFile.exists()) {
