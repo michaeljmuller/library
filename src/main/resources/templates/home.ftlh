@@ -3,7 +3,10 @@
 
 <@c.page title="Mike's Library" tabTitle="Mike's Library">
 
-    <div class="stats">Mike's library currently has ${titleCount} books and ${audiobookCount} audiobooks by ${authorCount} different authors.</div>
+    <div class="stats">
+        <p>Mike's library currently has ${titleCount} books and ${audiobookCount} audiobooks by ${authorCount} different authors.</p>
+        <p>The source code for this site is on <a href="https://github.com/michaeljmuller/library" target="_blank">github</a>.</p>
+    </div>
 
     <form action="/search" method="get">
         <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
