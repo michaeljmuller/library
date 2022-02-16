@@ -19,9 +19,10 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.groupingBy;
 
 /**
  * This is the main controller for the Library application; it handles requests to display web
@@ -73,9 +74,26 @@ public class LibraryController {
      * @return information needed to render the page
      */
     @GetMapping("/authors")
-    public ModelAndView authors() {
+    public ModelAndView authors(@RequestParam(value="sortBy", required=false, defaultValue="first") String sortBy) {
+
+        var authorInfoList = dao.getAuthorInfo();
+
+        boolean sortByLast = sortBy.equalsIgnoreCase("last");
+
+        if (sortByLast) {
+            Collections.sort(authorInfoList, (a, b) -> {
+                return a.getByLast().compareTo(b.getByLast());
+            });
+        }
+
+        var map = authorInfoList.stream().collect(groupingBy(a -> {
+            var name = sortByLast ? a.getByLast() : a.getName();
+            return name.substring(0,1).toUpperCase();
+        }));
+
         var mv = new LibraryModelAndView("authors");
-        mv.addObject("authors", dao.fetchAllAuthors());
+        mv.addObject("authorInfoMap", map);
+        mv.addObject("sortBy", sortByLast ? "last" : "first");
         return mv;
     }
 

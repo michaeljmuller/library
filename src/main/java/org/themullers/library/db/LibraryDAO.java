@@ -4,9 +4,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataRetrievalFailureException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.themullers.library.AuthorInfo;
 import org.themullers.library.Book;
 import org.themullers.library.auth.pwreset.PasswordResetToken;
 import org.themullers.library.User;
@@ -62,6 +64,32 @@ public class LibraryDAO {
     }
 
     // QUERY METHODS
+
+    /**
+     * Get information about each author in the library: name, title count, and tags associated with that author's work.
+     *
+     * @return  a list of AuthorInfo objects
+     */
+    public List<AuthorInfo> getAuthorInfo() {
+        String sql = """
+                select t.author, c.num_books, t.tags from (
+                  select b.author as author, group_concat(distinct t.tag separator ',') as tags
+                      from books b left outer join tags t
+                      on t.book_id = b.id group by b.author
+                ) as t
+                left outer join (
+                  select author as author, count(*) as num_books from books a group by author
+                ) as c on c.author = t.author
+                order by t.author
+                """;
+
+        return jt.query(sql, new RowMapper<AuthorInfo>() {
+            @Override
+            public AuthorInfo mapRow(ResultSet rs, int rowNum) throws SQLException {
+                return new AuthorInfo(rs.getString("author"), rs.getInt("num_books"), rs.getString("tags"));
+            }
+        });
+    }
 
     /**
      * Count the number of titles in the library.

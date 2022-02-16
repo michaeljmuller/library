@@ -68,7 +68,7 @@ input.search {
     background-color: #f0f0f0;
 }
 
-div.morebooks {
+div.rightLink {
     font-weight: bold;
     text-align: right;
     white-space: nowrap;
@@ -76,7 +76,12 @@ div.morebooks {
     padding-bottom: 2em;
 }
 
-div.morebooks a {
+div.rightLink a {
+    text-decoration: none;
+}
+
+.sortLink {
+    float: right;
     text-decoration: none;
 }
 
