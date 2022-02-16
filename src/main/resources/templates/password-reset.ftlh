@@ -14,7 +14,7 @@
         <#if _csrf??>
             <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
         </#if>
-        <button onclick="document.getElementById('loginForm').submit()">
+        <button onclick="document.getElementById('form').submit()">
             <span class="state">Reset Password</span>
         </button>
     </form>
