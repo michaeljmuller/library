@@ -66,6 +66,31 @@ public class LibraryDAO {
     // QUERY METHODS
 
     /**
+     * Fetch the books that have a certain tag.
+     * @param tag  the tag filtering which books will be returned
+     * @param limit  don't return more books than this threshold
+     * @param offset  skip this number of books from the beginning of the results
+     * @return  a list of books
+     */
+    public List<Book> fetchBooksWithTag(String tag, int limit, int offset) {
+
+        String sql = """
+                select
+                    %s, group_concat(distinct t.tag separator ',') as tags
+                from (
+                    select x.* from books x inner join tags y on x.id = y.book_id where y.tag = ?
+                ) as a
+                left outer join tags t on a.id = t.book_id
+                group by a.id
+                limit %s offset %s;
+                """;
+
+        sql = String.format(sql, commaSeparated(BOOK_COLS.class, "a"), limit, offset);
+
+        return jt.query(sql, LibraryDAO::mapBook, tag);
+    }
+
+    /**
      * Get information about each author in the library: name, title count, and tags associated with that author's work.
      *
      * @return  a list of AuthorInfo objects

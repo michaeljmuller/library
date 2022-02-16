@@ -4,7 +4,7 @@
     <table>
         <#list tags as tag,count>
             <tr>
-                <td>${tag}</td>
+                <td><a href="/tag/${tag?url}">${tag}</a></td>
                 <td>${count}</td>
             </tr>
         </#list>

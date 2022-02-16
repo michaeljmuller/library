@@ -214,6 +214,42 @@ public class LibraryController {
     }
 
     /**
+     * Display a page with all the books the have the specified tag applied to them.
+     * @param tag  the tag to use to filter the books returned
+     * @return  a view object containing a reference to the template that should be used to render the tag page
+     */
+    @GetMapping("/tag/{tag}")
+    public ModelAndView tag(@PathVariable("tag") String tag, @RequestParam(value="page", defaultValue="1") int page) {
+
+        int booksPerPage = 50;
+
+        // fetch one more book than the number we display on the page so know whether there's another page of results
+        var taggedBooks = dao.fetchBooksWithTag(tag, booksPerPage+1, (page-1) * booksPerPage);
+
+        // if there are more results after this page, adjust the count and throw out the last result
+        // (it's really the first result of the next page)
+        var numBooks = taggedBooks.size();
+        var hasMore = numBooks > booksPerPage;
+        if (hasMore) {
+            numBooks--;
+            taggedBooks.remove(numBooks);
+        }
+
+        // calculate the overall index of the first book on this page
+        var firstBookNum = ((page-1) * booksPerPage) + 1;
+
+        var mv = new LibraryModelAndView("tag");
+        mv.addObject("tag", tag);
+        mv.addObject("books", taggedBooks);
+        mv.addObject("page", page);
+        mv.addObject("nextPage", page+1);
+        mv.addObject("firstBookNum", firstBookNum);
+        mv.addObject("lastBookNum", firstBookNum + numBooks - 1);
+        mv.addObject("hasMore", hasMore);
+        return mv;
+    }
+
+    /**
      * Display the login page
      * @param error  whether this page is being re-displayed in response to a failed login
      * @param logout  whether this page is being displayed after a user logs out
@@ -436,19 +472,31 @@ public class LibraryController {
     public ModelAndView recents(@RequestParam(value="page", defaultValue="1") int page) {
         var mv = new LibraryModelAndView("/recent-acquisitions");
 
-        // get the most recent books
         int booksPerPage = 50;
-        var newReleases = dao.fetchNewestBooks(booksPerPage, (page-1) * booksPerPage);
+
+        // fetch one more book than the number we display on the page so know whether there's another page of results
+        var newReleases = dao.fetchNewestBooks(booksPerPage+1, (page-1) * booksPerPage);
+
+        // if there are more results after this page, adjust the count and throw out the last result
+        // (it's really the first result of the next page)
         var numBooks = newReleases.size();
+        var hasMore = numBooks > booksPerPage;
+        if (hasMore) {
+            numBooks--;
+            newReleases.remove(numBooks);
+        }
+
+        // calculate the index of the first book on this page
         var firstBookNum = ((page-1) * booksPerPage) + 1;
 
         mv.addObject("books", newReleases);
         mv.addObject("page", page);
         mv.addObject("nextPage", page+1);
         mv.addObject("firstBookNum", firstBookNum);
-        mv.addObject("lastBookNum", firstBookNum + numBooks);
+        mv.addObject("lastBookNum", firstBookNum + numBooks - 1);
         mv.addObject("firstBookDate", newReleases.get(0).getAcquisitionDate());
         mv.addObject("lastBookDate",  newReleases.get(numBooks-1).getAcquisitionDate());
+        mv.addObject("hasMore", hasMore);
 
         return mv;
     }

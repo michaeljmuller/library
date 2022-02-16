@@ -11,7 +11,7 @@
                     <div>
                         ${letter}
                         <#if letter=="A">
-                            <a class="sortLink" href="/authors?sortBy=${reverse}">Change: sort by ${reverse}</a>
+                            <span class="sortLink">Change to sort by <a href="/authors?sortBy=${reverse}">${reverse}</a></span>
                         </#if>
                     </div>
                 </td>
@@ -20,8 +20,10 @@
                 <#assign name = (sortBy=="last")?then(authorInfo.byLast,authorInfo.name) />
                 <#if name?upper_case?starts_with(letter)>
                     <tr>
-                        <td nowrap><a href="/author?name=${authorInfo.name?url}">${name}</a><!--</td>
-                        <td nowrap> -->, ${authorInfo.numTitles} book<#if authorInfo.numTitles gt 1>s</#if></td>
+                        <td nowrap>
+                            <a href="/author?name=${authorInfo.name?url}">${name}</a>,
+                            ${authorInfo.numTitles} book<#if authorInfo.numTitles gt 1>s</#if>
+                        </td>
                         <td><#list authorInfo.tags as tag>${tag}<#sep>, </#list></td>
                     </tr>
                 </#if>
