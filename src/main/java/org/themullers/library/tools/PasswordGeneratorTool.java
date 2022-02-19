@@ -5,7 +5,7 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 /**
  * Generates a new password.
  */
-public class PasswordGenerator {
+public class PasswordGeneratorTool {
     public static void main(String args[]) {
         var encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
         var plainPw = args[0];

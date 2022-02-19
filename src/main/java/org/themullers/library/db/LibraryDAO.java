@@ -63,6 +63,13 @@ public class LibraryDAO {
         asin,
     }
 
+    public final static String BOOK_ORDER_TITLE = "title";
+    public final static String BOOK_ORDER_AUTHOR = "author";
+    public final static String BOOK_ORDER_PUB_YEAR_ASC = "pubYearAsc";
+    public final static String BOOK_ORDER_ACQ_DATE_ASC = "acqDateAsc";
+    public final static String BOOK_ORDER_PUB_YEAR_DESC = "pubYearDesc";
+    public final static String BOOK_ORDER_ACQ_DATE_DESC = "acqDateDesc";
+
     // QUERY METHODS
 
     /**
@@ -70,9 +77,20 @@ public class LibraryDAO {
      * @param tag  the tag filtering which books will be returned
      * @param limit  don't return more books than this threshold
      * @param offset  skip this number of books from the beginning of the results
+     * @param order  one of the BOOK_ORDER_* values or null
      * @return  a list of books
      */
-    public List<Book> fetchBooksWithTag(String tag, int limit, int offset) {
+    public List<Book> fetchBooksWithTag(String tag, int limit, int offset, String order) {
+
+        var orderBySql = switch (order) {
+            case BOOK_ORDER_TITLE -> "a.title";
+            case BOOK_ORDER_AUTHOR -> "a.author, a.series, a.series_sequence, a.pub_year";
+            case BOOK_ORDER_PUB_YEAR_DESC -> "a.pub_year desc, a.title";
+            case BOOK_ORDER_ACQ_DATE_DESC -> "a.acq_date desc, a.title";
+            case BOOK_ORDER_PUB_YEAR_ASC -> "a.pub_year asc, a.title";
+            case BOOK_ORDER_ACQ_DATE_ASC -> "a.acq_date asc, a.title";
+            default -> "a.acq_date desc, a.title";
+        };
 
         String sql = """
                 select
@@ -82,10 +100,11 @@ public class LibraryDAO {
                 ) as a
                 left outer join tags t on a.id = t.book_id
                 group by a.id
-                limit %s offset %s;
+                order by %s
+                limit %s offset %s
                 """;
 
-        sql = String.format(sql, commaSeparated(BOOK_COLS.class, "a"), limit, offset);
+        sql = String.format(sql, commaSeparated(BOOK_COLS.class, "a"), orderBySql, limit, offset);
 
         return jt.query(sql, LibraryDAO::mapBook, tag);
     }

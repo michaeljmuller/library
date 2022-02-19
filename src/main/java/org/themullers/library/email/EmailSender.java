@@ -14,7 +14,7 @@ import java.util.Properties;
 @Component
 public class EmailSender {
 
-    public final String EMAIL_SENDER = "mike@themullers.org";
+    public final String EMAIL_SENDER = "mike@themullers.org";  // todo
 
     protected String host;
     protected String port;

@@ -219,12 +219,21 @@ public class LibraryController {
      * @return  a view object containing a reference to the template that should be used to render the tag page
      */
     @GetMapping("/tag/{tag}")
-    public ModelAndView tag(@PathVariable("tag") String tag, @RequestParam(value="page", defaultValue="1") int page) {
+    public ModelAndView tag(@PathVariable("tag") String tag, @RequestParam(value="page", defaultValue="1") int page, @RequestParam(value="order", defaultValue=LibraryDAO.BOOK_ORDER_ACQ_DATE_DESC) String order) {
 
         int booksPerPage = 50;
 
+        var orderOptions = Map.of(
+                LibraryDAO.BOOK_ORDER_AUTHOR, "Author",
+                LibraryDAO.BOOK_ORDER_TITLE, "Title",
+                LibraryDAO.BOOK_ORDER_ACQ_DATE_DESC, "Acquisition Date, Descending",
+                LibraryDAO.BOOK_ORDER_ACQ_DATE_ASC, "Acquisition Date, Ascending",
+                LibraryDAO.BOOK_ORDER_PUB_YEAR_DESC, "Publication Year, Descending",
+                LibraryDAO.BOOK_ORDER_PUB_YEAR_ASC, "Publication Year, Ascending"
+        );
+
         // fetch one more book than the number we display on the page so know whether there's another page of results
-        var taggedBooks = dao.fetchBooksWithTag(tag, booksPerPage+1, (page-1) * booksPerPage);
+        var taggedBooks = dao.fetchBooksWithTag(tag, booksPerPage+1, (page-1) * booksPerPage, order);
 
         // if there are more results after this page, adjust the count and throw out the last result
         // (it's really the first result of the next page)
@@ -246,6 +255,8 @@ public class LibraryController {
         mv.addObject("firstBookNum", firstBookNum);
         mv.addObject("lastBookNum", firstBookNum + numBooks - 1);
         mv.addObject("hasMore", hasMore);
+        mv.addObject("order", order);
+        mv.addObject("orderOptions", orderOptions);
         return mv;
     }
 
@@ -501,6 +512,12 @@ public class LibraryController {
         return mv;
     }
 
+    /**
+     * Display a page with a form that allows you to submit a query as well as the results
+     * from a possible previously-provided query.
+     * @param searchText  the text to search for
+     * @return  a view object containing the template that should be used to render the search page
+     */
     @GetMapping("/search")
     public ModelAndView search(@RequestParam(value= "for", required=false) String searchText) {
         var mv = new LibraryModelAndView("/search");
