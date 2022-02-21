@@ -36,6 +36,9 @@ public class Security extends WebSecurityConfigurerAdapter {
             // also allow everyone access to the static resources
             conf.antMatchers("/styles/**", "/images/**").permitAll();
 
+            // require an administrator to access these pages (and REST API endpoints)
+            conf.antMatchers("/admin/**", "/api/**").hasAnyRole("admin");
+
             // everything else requires you to be logged in
             conf.anyRequest().authenticated();
         });
@@ -47,7 +50,7 @@ public class Security extends WebSecurityConfigurerAdapter {
             conf.loginPage("/login");
 
             // indicate which page should be displayed after login
-            conf.defaultSuccessUrl("/", true);
+            conf.defaultSuccessUrl("/", false);
 
             // allow everyone to access the login page
             conf.permitAll();

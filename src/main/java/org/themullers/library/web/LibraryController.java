@@ -15,11 +15,15 @@ import org.themullers.library.db.LibraryDAO;
 import org.themullers.library.s3.LibraryOSAO;
 import org.themullers.library.web.forms.BookForm;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
@@ -139,7 +143,7 @@ public class LibraryController {
      * @param stackDump an optional stack trace with diagnostic information concerning the failure of an earlier operation
      * @return information needed to render the page
      */
-    @GetMapping("metadata")
+    @GetMapping("/admin/metadata")
     public ModelAndView metadata(@RequestParam(name = "msg", required = false) String msg, @RequestParam(name = "status", required = false) String status, @ModelAttribute(name = "stackDump") String stackDump) {
         var mv = new LibraryModelAndView("metadata");
         mv.addObject("msg", msg);
@@ -154,7 +158,7 @@ public class LibraryController {
      * @return a spreadsheet
      * @throws IOException thrown if an unexpected error occurs generating the spreadsheet
      */
-    @GetMapping(value = "/ss", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    @GetMapping(value = "/admin/ss", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public byte[] downloadSpreadsheet() throws IOException {
         return ss.download();
     }
@@ -167,7 +171,7 @@ public class LibraryController {
      * @return a view object that instructs Spring Boot to redirect the user to the "metadata" page
      * @throws IOException thrown if an unexpected error occurs processing the spreadsheet
      */
-    @PostMapping("/ss")
+    @PostMapping("/admin/ss")
     public RedirectView uploadSpreadsheet(@RequestParam("file") MultipartFile file, RedirectAttributes redirectAttributes) throws IOException {
 
         // get information about the uploaded file
@@ -350,7 +354,7 @@ public class LibraryController {
      * @return  a view object containing the template that should be used to render the "edit book" page
      * @throws IOException  thrown if an IO error occurs while we're trying to render this page
      */
-    @GetMapping("/editBook/{id}")
+    @GetMapping("/admin/editBook/{id}")
     public ModelAndView editBookFormDisplay(@PathVariable("id") int bookId, @RequestHeader(value="Referer", required=false) String httpReferrer) throws IOException {
 
         // populate the model
@@ -530,5 +534,84 @@ public class LibraryController {
         }
 
         return mv;
+    }
+
+    /**
+     * Display the form that allows an administrator to delete a book.
+     * @param bookId  the id of the book to delete
+     * @param httpReferrer  the page that sent us here (or null if, for example, someone typed in the URL)
+     * @return  a view object containing the template that should be used to render the "delete book" page
+     */
+    @GetMapping("/admin/deleteBookForm/{id}")
+    public ModelAndView diplayDeleteBookForm(@PathVariable("id") int bookId, @RequestHeader(value="Referer", required=false) String httpReferrer) {
+        var mv = new LibraryModelAndView("/delete");
+        var book = dao.fetchBook(bookId);
+        mv.addObject("book", book);
+        mv.addObject("numOtherBooksWithThisEpub", dao.numBooksWithSameEpubAsset(book));
+        mv.addObject("numOtherBooksWithThisMobi", dao.numBooksWithSameMobiAsset(book));
+        mv.addObject("numOtherBooksWithThisAudiobook", dao.numBooksWithSameAudiobookAsset(book));
+        mv.addObject("referrer", httpReferrer);
+        return mv;
+    }
+
+    /**
+     * Delete a book and display a confirmation.
+     * @param bookId  the id of the book to delete
+     * @param request  the http request
+     * @return  a view object containing the template that should be used to render the "book deleted" page
+     */
+    @PostMapping("/admin/deleteBookForm/{id}")
+    public ModelAndView processDeleteBookForm(@PathVariable("id") int bookId, HttpServletRequest request) {
+        var mv = new LibraryModelAndView("/confirmDelete");
+
+        var book = dao.fetchBook(bookId);
+        var epub = book.getEpubObjectKey();
+        var mobi = book.getMobiObjectKey();
+        var audiobook = book.getAudiobookObjectKey();
+
+        // get confirmation from the submitted form about which object store assets should be deleted
+        var deleteEpub = isChecked("deleteEpub", request) && Utils.isNotBlank(epub);
+        var deleteMobi = isChecked("deleteMobi", request) && Utils.isNotBlank(mobi);
+        var deleteAudiobook = isChecked("deleteAudiobook", request) && Utils.isNotBlank(audiobook);
+
+        var deletedAssets = new LinkedList<String>();
+
+        // if there is an EPUB and the admin requested deletion, delete it
+        if (deleteEpub) {
+            //osao.deleteObject(epub);
+            deletedAssets.add(epub);
+        }
+
+        // if there is a MOBI and the admin requested deletion, delete it
+        if (deleteMobi) {
+            //osao.deleteObject(mobi);
+            deletedAssets.add(mobi);
+        }
+
+        // if there is an audiobook and the admin requested deletion, delete it
+        if (deleteAudiobook) {
+            //osao.deleteObject(audiobook);
+            deletedAssets.add(audiobook);
+        }
+
+        // delete the database entry for the book
+        //dao.deleteBook(bookId);
+
+        // populate the model
+        mv.addObject("bookId", bookId);
+        mv.addObject("deletedAssets", deletedAssets);
+
+        return mv;
+    }
+
+    /**
+     * Return whether a checkbox on a form is checked.
+     * @param parameterName  the name of the checkbox form element
+     * @param request  the http request
+     * @return  whether the checkbox is checked
+     */
+    protected boolean isChecked(String parameterName, HttpServletRequest request) {
+        var parameterValue = request.getParameter(parameterName);
+        return Utils.isNotBlank(parameterValue);
     }
 }

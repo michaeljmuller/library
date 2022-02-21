@@ -5,13 +5,13 @@
 
     <div class="section">Download Metadata</div>
 
-    <form method="GET" action="/ss">
+    <form method="GET" action="/admin/ss">
         <input class="submitButton" type="submit" value="Download Metadata Spreadsheet" />
     </form>
 
     <div class="section">Upload Metadata</div>
 
-    <form method="POST" enctype="multipart/form-data" action="/ss<#if _csrf??>?${_csrf.parameterName}=${_csrf.token}</#if>">
+    <form method="POST" enctype="multipart/form-data" action="/admin/ss<#if _csrf??>?${_csrf.parameterName}=${_csrf.token}</#if>">
         <#if _csrf??>
             <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}" />
         </#if>

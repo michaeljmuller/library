@@ -40,7 +40,7 @@
                     <#if isAdmin>
                         <li><a href="#">Admin</a>
                             <ul>
-                                <li><a href="/metadata">Metadata</a></li>
+                                <li><a href="/admin/metadata">Metadata</a></li>
                                 <li><a href="#">Users</a></li>
                                 <li><a href="https://cloud.linode.com/object-storage/buckets/us-east-1/michaeljmuller-media" target="_blank">Upload Assets</a></li>
                                 <li><a href="/admin/newAssets">New Assets</a></li>

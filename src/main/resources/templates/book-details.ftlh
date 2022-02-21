@@ -75,7 +75,8 @@
                 <@link "Download EPUB" "/book/epub/${book.id?c}" "/images/download.png" book.epubObjectKey?? />
                 <@link "Download MOBI" "/book/mobi/${book.id?c}" "/images/download.png" book.mobiObjectKey?? />
                 <@link "Download M4B Audiobook" "/book/m4b/${book.id?c}" "/images/audiobook.png" book.audiobookObjectKey?? />
-                <@link "Edit Book Metadata" "/editBook/${book.id?c}" "/images/edit.png" isAdmin />
+                <@link "Edit Book Metadata" "/admin/editBook/${book.id?c}" "/images/edit.png" isAdmin />
+                <@link "Delete this Book" "/admin/deleteBookForm/${book.id?c}" "/images/delete.png" isAdmin />
             </div>
         </div>
         <div class="book-cover-image">

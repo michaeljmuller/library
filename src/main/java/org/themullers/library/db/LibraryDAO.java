@@ -73,6 +73,75 @@ public class LibraryDAO {
     // QUERY METHODS
 
     /**
+     * Returns a list of EPUB object keys that are used by more than one book (this should not happen).
+     * @return  a list of EPUB object keys
+     */
+    public List<String> epubsInMultipleBooks() {
+        var sql = """
+                select distinct epub_object_key from books
+                where epub_object_key is not null
+                group by epub_object_key
+                having count(*) > 1
+                """;
+        return jt.queryForList(sql, String.class);
+    }
+
+    /**
+     * Returns a list of MOBI object keys that are used by more than one book (this should not happen).
+     * @return  a list of MOBI object keys
+     */
+    public List<String> mobisInMultipleBooks() {
+        var sql = """
+                select distinct mobi_object_key from books
+                where mobi_object_key is not null
+                group by mobi_object_key
+                having count(*) > 1
+                """;
+        return jt.queryForList(sql, String.class);
+    }
+
+    /**
+     * Returns a list of audiobook object keys that are used by more than one book (this should not happen).
+     * @return  a list of audiobook object keys
+     */
+    public List<String> audiobooksInMultipleBooks() {
+        var sql = """
+                select distinct audiobook_object_key from books
+                where audiobook_object_key is not null
+                group by audiobook_object_key
+                having count(*) > 1
+                """;
+        return jt.queryForList(sql, String.class);
+    }
+
+    /**
+     * Look for books with the same EPUB object key as the given book.
+     * @param book  a book object
+     * @return  the number of books with the same EPUB object key as the given book.
+     */
+    public int numBooksWithSameEpubAsset(Book book) {
+        return jt.queryForObject("select count(*) from books where epub_object_key = ? and id <> ?", Integer.class, book.getEpubObjectKey(), book.getId());
+    }
+
+    /**
+     * Look for books with the same MOBI object key as the given book.
+     * @param book  a book object
+     * @return  the number of books with the same MOBI object key as the given book.
+     */
+    public int numBooksWithSameMobiAsset(Book book) {
+        return jt.queryForObject("select count(*) from books where mobi_object_key = ? and id <> ?", Integer.class, book.getMobiObjectKey(), book.getId());
+    }
+
+    /**
+     * Look for books with the same audiobook object key as the given book.
+     * @param book  a book object
+     * @return  the number of books with the same audiobook object key as the given book.
+     */
+    public int numBooksWithSameAudiobookAsset(Book book) {
+        return jt.queryForObject("select count(*) from books where audiobook_object_key = ? and id <> ?", Integer.class, book.getAudiobookObjectKey(), book.getId());
+    }
+
+    /**
      * Fetch the books that have a certain tag.
      * @param tag  the tag filtering which books will be returned
      * @param limit  don't return more books than this threshold
@@ -522,7 +591,17 @@ public class LibraryDAO {
         return tokens == null || tokens.size() <= 0 ? null : tokens.get(0);
     }
 
-    // INSERT/UPDATE METHODS
+    // INSERT/UPDATE/DELETE METHODS
+
+    /**
+     * Delete a book from the library's database, along with any associated tags.
+     * @param bookId  the primary key id of the book to delete
+     */
+    public void deleteBook(int bookId) {
+        // TODO: update schema to use ON DELETE CASCADE
+        jt.update("delete from tags where book_id = ?", bookId);
+        jt.update("delete from books where id = ?", bookId);
+    }
 
     /**
      * Inserts a book into the database.
