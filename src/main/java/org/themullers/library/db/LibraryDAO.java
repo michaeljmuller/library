@@ -151,16 +151,6 @@ public class LibraryDAO {
      */
     public List<Book> fetchBooksWithTag(String tag, int limit, int offset, String order) {
 
-        var orderBySql = switch (order) {
-            case BOOK_ORDER_TITLE -> "a.title";
-            case BOOK_ORDER_AUTHOR -> "a.author, a.series, a.series_sequence, a.pub_year";
-            case BOOK_ORDER_PUB_YEAR_DESC -> "a.pub_year desc, a.title";
-            case BOOK_ORDER_ACQ_DATE_DESC -> "a.acq_date desc, a.title";
-            case BOOK_ORDER_PUB_YEAR_ASC -> "a.pub_year asc, a.title";
-            case BOOK_ORDER_ACQ_DATE_ASC -> "a.acq_date asc, a.title";
-            default -> "a.acq_date desc, a.title";
-        };
-
         String sql = """
                 select
                     %s, group_concat(distinct t.tag separator ',') as tags
@@ -173,9 +163,51 @@ public class LibraryDAO {
                 limit %s offset %s
                 """;
 
-        sql = String.format(sql, commaSeparated(BOOK_COLS.class, "a"), orderBySql, limit, offset);
+        sql = String.format(sql, commaSeparated(BOOK_COLS.class, "a"), orderBySql(order), limit, offset);
 
         return jt.query(sql, LibraryDAO::mapBook, tag);
+    }
+
+    /**
+     * Fetch all the audiobooks.
+     * @param limit  don't return more books than this threshold
+     * @param offset  skip this number of books from the beginning of the results
+     * @param order  one of the BOOK_ORDER_* values or null
+     * @return  a list of books
+     */
+    public List<Book> fetchAudiobooks(int limit, int offset, String order) {
+
+        String sql = """
+                select
+                    %s, group_concat(distinct t.tag separator ',') as tags
+                from books a
+                left outer join tags t on a.id = t.book_id
+                where a.audiobook_object_key is not null
+                group by a.id
+                order by %s
+                limit %s offset %s
+                """;
+
+        sql = String.format(sql, commaSeparated(BOOK_COLS.class, "a"), orderBySql(order), limit, offset);
+
+        return jt.query(sql, LibraryDAO::mapBook);
+    }
+
+    /**
+     * Generate SQL to order a book query based on the BOOK_ORDER_* constant specified.
+     * @param orderByConst  the desired order
+     * @return  a SQL order by clause
+     */
+    protected String orderBySql(String orderByConst) {
+        return switch (orderByConst) {
+            case BOOK_ORDER_TITLE -> "a.title";
+            case BOOK_ORDER_AUTHOR -> "a.author, a.series, a.series_sequence, a.pub_year";
+            case BOOK_ORDER_PUB_YEAR_DESC -> "a.pub_year desc, a.title";
+            case BOOK_ORDER_ACQ_DATE_DESC -> "a.acq_date desc, a.title";
+            case BOOK_ORDER_PUB_YEAR_ASC -> "a.pub_year asc, a.title";
+            case BOOK_ORDER_ACQ_DATE_ASC -> "a.acq_date asc, a.title";
+            default -> "a.acq_date desc, a.title";
+        };
     }
 
     /**
@@ -599,6 +631,7 @@ public class LibraryDAO {
      */
     public void deleteBook(int bookId) {
         // TODO: update schema to use ON DELETE CASCADE
+        jt.update("delete from cover_images where book_id = ?", bookId);
         jt.update("delete from tags where book_id = ?", bookId);
         jt.update("delete from books where id = ?", bookId);
     }

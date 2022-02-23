@@ -45,6 +45,16 @@ public class LibraryController {
     LibUtils libUtils;
     BookImageCache bookImageCache;
 
+    // display text for the various order options
+    protected static Map<String, String> orderOptions = Map.of(
+            LibraryDAO.BOOK_ORDER_AUTHOR, "Author",
+            LibraryDAO.BOOK_ORDER_TITLE, "Title",
+            LibraryDAO.BOOK_ORDER_ACQ_DATE_DESC, "Acquisition Date, Descending",
+            LibraryDAO.BOOK_ORDER_ACQ_DATE_ASC, "Acquisition Date, Ascending",
+            LibraryDAO.BOOK_ORDER_PUB_YEAR_DESC, "Publication Year, Descending",
+            LibraryDAO.BOOK_ORDER_PUB_YEAR_ASC, "Publication Year, Ascending"
+    );
+
     @Autowired
     public LibraryController(LibraryDAO dao, LibraryOSAO osao, SpreadsheetService ss, LibUtils libUtils, BookImageCache bookImageCache) {
         this.dao = dao;
@@ -227,15 +237,6 @@ public class LibraryController {
 
         int booksPerPage = 50;
 
-        var orderOptions = Map.of(
-                LibraryDAO.BOOK_ORDER_AUTHOR, "Author",
-                LibraryDAO.BOOK_ORDER_TITLE, "Title",
-                LibraryDAO.BOOK_ORDER_ACQ_DATE_DESC, "Acquisition Date, Descending",
-                LibraryDAO.BOOK_ORDER_ACQ_DATE_ASC, "Acquisition Date, Ascending",
-                LibraryDAO.BOOK_ORDER_PUB_YEAR_DESC, "Publication Year, Descending",
-                LibraryDAO.BOOK_ORDER_PUB_YEAR_ASC, "Publication Year, Ascending"
-        );
-
         // fetch one more book than the number we display on the page so know whether there's another page of results
         var taggedBooks = dao.fetchBooksWithTag(tag, booksPerPage+1, (page-1) * booksPerPage, order);
 
@@ -253,6 +254,43 @@ public class LibraryController {
 
         var mv = new LibraryModelAndView("tag");
         mv.addObject("tag", tag);
+        mv.addObject("books", taggedBooks);
+        mv.addObject("page", page);
+        mv.addObject("nextPage", page+1);
+        mv.addObject("firstBookNum", firstBookNum);
+        mv.addObject("lastBookNum", firstBookNum + numBooks - 1);
+        mv.addObject("hasMore", hasMore);
+        mv.addObject("order", order);
+        mv.addObject("orderOptions", orderOptions);
+        return mv;
+    }
+
+    /**
+     * Display a page with all the audiobooks in the library.
+     * @return  a view object containing a reference to the template that should be used to render the "audiobooks" page
+     */
+    @GetMapping("/audiobooks")
+    public ModelAndView audiobooks(@RequestParam(value="page", defaultValue="1") int page, @RequestParam(value="order", defaultValue=LibraryDAO.BOOK_ORDER_ACQ_DATE_DESC) String order) {
+
+        int booksPerPage = 50;
+
+        // fetch one more book than the number we display on the page so know whether there's another page of results
+        var taggedBooks = dao.fetchAudiobooks(booksPerPage+1, (page-1) * booksPerPage, order);
+
+        // if there are more results after this page, adjust the count and throw out the last result
+        // (it's really the first result of the next page)
+        var numBooks = taggedBooks.size();
+        var hasMore = numBooks > booksPerPage;
+        if (hasMore) {
+            numBooks--;
+            taggedBooks.remove(numBooks);
+        }
+
+        // calculate the overall index of the first book on this page
+        var firstBookNum = ((page-1) * booksPerPage) + 1;
+
+        // populate the model
+        var mv = new LibraryModelAndView("audiobooks");
         mv.addObject("books", taggedBooks);
         mv.addObject("page", page);
         mv.addObject("nextPage", page+1);
@@ -578,24 +616,24 @@ public class LibraryController {
 
         // if there is an EPUB and the admin requested deletion, delete it
         if (deleteEpub) {
-            //osao.deleteObject(epub);
+            osao.deleteObject(epub);
             deletedAssets.add(epub);
         }
 
         // if there is a MOBI and the admin requested deletion, delete it
         if (deleteMobi) {
-            //osao.deleteObject(mobi);
+            osao.deleteObject(mobi);
             deletedAssets.add(mobi);
         }
 
         // if there is an audiobook and the admin requested deletion, delete it
         if (deleteAudiobook) {
-            //osao.deleteObject(audiobook);
+            osao.deleteObject(audiobook);
             deletedAssets.add(audiobook);
         }
 
         // delete the database entry for the book
-        //dao.deleteBook(bookId);
+        dao.deleteBook(bookId);
 
         // populate the model
         mv.addObject("bookId", bookId);

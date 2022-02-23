@@ -37,6 +37,7 @@
                     <li><a href="/">Home</a></li>
                     <li><a href="/authors">Authors</a></li>
                     <li><a href="/tags">Tags</a></li>
+                    <li><a href="/audiobooks">Audiobooks</a></li>
                     <#if isAdmin>
                         <li><a href="#">Admin</a>
                             <ul>
