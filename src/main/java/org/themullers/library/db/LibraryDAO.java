@@ -10,12 +10,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.themullers.library.AuthorInfo;
 import org.themullers.library.Book;
-import org.themullers.library.auth.pwreset.PasswordResetToken;
+import org.themullers.library.Review;
 import org.themullers.library.User;
+import org.themullers.library.auth.pwreset.PasswordResetToken;
 
-import java.sql.*;
+import java.sql.Blob;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.*;
-import java.util.Date;
 import java.util.stream.Collectors;
 
 /**
@@ -63,6 +66,21 @@ public class LibraryDAO {
         asin,
     }
 
+    /**
+     * An enumeration of all the columns in the reviews table.
+     */
+    enum REVIEW_COLS {
+        user_id,
+        book_id,
+        num_stars,
+        review,
+        spoilers,
+        private_notes,
+        recommended,
+        create_date,
+        modify_date
+    }
+
     public final static String BOOK_ORDER_TITLE = "title";
     public final static String BOOK_ORDER_AUTHOR = "author";
     public final static String BOOK_ORDER_PUB_YEAR_ASC = "pubYearAsc";
@@ -71,6 +89,47 @@ public class LibraryDAO {
     public final static String BOOK_ORDER_ACQ_DATE_DESC = "acqDateDesc";
 
     // QUERY METHODS
+
+    public List<Review> fetchReviews(int bookId) {
+        var sql = """
+                select r.*, u.* 
+                from reviews r inner join users u on r.user_id = u.id 
+                where r.book_id = ?
+                """;
+        return jt.query(sql, LibraryDAO::mapReview, bookId);
+    }
+
+    public Review fetchReview(int bookId, int userId) {
+        var sql = """
+                select r.*, u.* 
+                from reviews r inner join users u on r.user_id = u.id 
+                where r.book_id = ? and r.user_id = ?
+                """;
+
+        try {
+            return jt.queryForObject(sql, LibraryDAO::mapReview, bookId, userId);
+        }
+        catch (EmptyResultDataAccessException x) {
+            return null;
+        }
+    }
+
+    protected static Review mapReview(ResultSet rs, int rowNum) throws SQLException {
+
+        var review = new Review();
+
+        // read columns from the result set, write to properties of the object
+        review.setRating(rs.getInt(REVIEW_COLS.num_stars.toString()));
+        review.setReview(rs.getString(REVIEW_COLS.review.toString()));
+        review.setPrivateNotes(rs.getString(REVIEW_COLS.private_notes.toString()));
+        review.setSpoilers(rs.getString(REVIEW_COLS.spoilers.toString()));
+        review.setRecommended(rs.getBoolean(REVIEW_COLS.recommended.toString()));
+        review.setCreateDate(rs.getDate(REVIEW_COLS.create_date.toString()));
+        review.setModifyDate(rs.getDate(REVIEW_COLS.modify_date.toString()));
+        review.setUser(mapUser(rs, rowNum));
+
+        return review;
+    }
 
     /**
      * Returns a list of EPUB object keys that are used by more than one book (this should not happen).
@@ -141,6 +200,31 @@ public class LibraryDAO {
         return jt.queryForObject("select count(*) from books where audiobook_object_key = ? and id <> ?", Integer.class, book.getAudiobookObjectKey(), book.getId());
     }
 
+    public record BookAndReview(Book book, Review review) {}
+
+    protected static BookAndReview mapBookAndReview(ResultSet rs, int rowNum) throws SQLException {
+        return new BookAndReview(mapBook(rs, rowNum), mapReview(rs, rowNum));
+    }
+
+    public List<BookAndReview> fetchRecommendedBooks(int limit, int offset) {
+        String sql = """
+                select
+                    %s, group_concat(distinct t.tag separator ',') as tags, (select round(avg(num_stars)) from reviews r where book_id = a.id and r.num_stars > 0) as avg_rating, v.*, u.*
+                from books a
+                inner join reviews v on v.book_id = a.id
+                inner join users u on u.id = v.user_id
+                left outer join tags t on a.id = t.book_id
+                where v.recommended = 1
+                group by a.id
+                order by v.create_date desc
+                limit %s offset %s
+                """;
+
+        sql = String.format(sql, commaSeparated(BOOK_COLS.class, "a"), limit, offset);
+
+        return jt.query(sql, LibraryDAO::mapBookAndReview);
+    }
+
     /**
      * Fetch the books that have a certain tag.
      * @param tag  the tag filtering which books will be returned
@@ -153,7 +237,7 @@ public class LibraryDAO {
 
         String sql = """
                 select
-                    %s, group_concat(distinct t.tag separator ',') as tags
+                    %s, group_concat(distinct t.tag separator ',') as tags, (select round(avg(num_stars)) from reviews r where book_id = a.id and r.num_stars > 0) as avg_rating
                 from (
                     select x.* from books x inner join tags y on x.id = y.book_id where y.tag = ?
                 ) as a
@@ -179,7 +263,7 @@ public class LibraryDAO {
 
         String sql = """
                 select
-                    %s, group_concat(distinct t.tag separator ',') as tags
+                    %s, group_concat(distinct t.tag separator ',') as tags, (select round(avg(num_stars)) from reviews r where book_id = a.id and r.num_stars > 0) as avg_rating
                 from books a
                 left outer join tags t on a.id = t.book_id
                 where a.audiobook_object_key is not null
@@ -392,7 +476,7 @@ public class LibraryDAO {
      * @return  list of books
      */
     public List<Book> fetchAllBooks() {
-        String sql = String.format("select %s, group_concat(t.tag separator ',') as tags from books a left outer join tags t on a.id = t.book_id group by a.id", commaSeparated(BOOK_COLS.class, "a"));
+        String sql = String.format("select %s, group_concat(t.tag separator ',') as tags, (select round(avg(num_stars)) from reviews where book_id = id and rating > 0) as avg_rating from books a left outer join tags t on a.id = t.book_id group by a.id", commaSeparated(BOOK_COLS.class, "a"));
         return jt.query(sql, LibraryDAO::mapBook);
     }
 
@@ -402,7 +486,7 @@ public class LibraryDAO {
      * @return  the matching book
      */
     public Book fetchBook(int bookId) {
-        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags from books a left outer join tags t on a.id = t.book_id where a.id = ? limit 1", commaSeparated(BOOK_COLS.class, "a"));
+        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags, (select round(avg(num_stars)) from reviews r where book_id = a.id and r.num_stars > 0) as avg_rating from books a left outer join tags t on a.id = t.book_id where a.id = ? limit 1", commaSeparated(BOOK_COLS.class, "a"));
         var books = jt.query(sql, LibraryDAO::mapBook, bookId);
         return books == null || books.size() < 1 ? null : books.get(0);
     }
@@ -414,7 +498,7 @@ public class LibraryDAO {
      * @return  the matching book
      */
     public Book fetchBook(String title, String author) {
-        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags from books a left outer join tags t on a.id = t.book_id where a.title=? and a.author=? limit 1", commaSeparated(BOOK_COLS.class, "a"));
+        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags, (select round(avg(num_stars)) from reviews r where book_id = a.id and r.num_stars > 0) as avg_rating from books a left outer join tags t on a.id = t.book_id where a.title=? and a.author=? limit 1", commaSeparated(BOOK_COLS.class, "a"));
         var books = jt.query(sql, LibraryDAO::mapBook, title, author);
         return books == null || books.size() < 1 ? null : books.get(0);
     }
@@ -425,7 +509,7 @@ public class LibraryDAO {
      * @return  list of books
      */
     public List<Book> fetchBooksForAuthor(String author) {
-        String sql = String.format("select %s , group_concat(t.tag separator ',') as tags from books a left outer join tags t on a.id = t.book_id where a.author = ? group by a.id", commaSeparated(BOOK_COLS.class, "a"));
+        String sql = String.format("select %s , group_concat(t.tag separator ',') as tags, (select round(avg(num_stars)) from reviews r where book_id = a.id and r.num_stars > 0) as avg_rating from books a left outer join tags t on a.id = t.book_id where a.author = ? group by a.id", commaSeparated(BOOK_COLS.class, "a"));
         return jt.query(sql, LibraryDAO::mapBook, author);
     }
 
@@ -437,7 +521,7 @@ public class LibraryDAO {
      * @return  a list of books
      */
     public List<Book> fetchNewestBooks(int limit, int skip) {
-        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags from books a left outer join tags t on a.id = t.book_id group by a.id order by acq_date desc limit %s offset %s", commaSeparated(BOOK_COLS.class, "a"), limit, skip);
+        var sql = String.format("select %s, group_concat(t.tag separator ',') as tags, (select round(avg(num_stars)) from reviews r where book_id = a.id and r.num_stars > 0) as avg_rating from books a left outer join tags t on a.id = t.book_id group by a.id order by acq_date desc limit %s offset %s", commaSeparated(BOOK_COLS.class, "a"), limit, skip);
         return jt.query(sql, LibraryDAO::mapBook);
     }
 
@@ -489,6 +573,11 @@ public class LibraryDAO {
         book.setMobiObjectKey(rs.getString(withTableId(BOOK_COLS.mobi_object_key, "a")));
         book.setAudiobookObjectKey(rs.getString(withTableId(BOOK_COLS.audiobook_object_key, "a")));
         book.setAmazonId(rs.getString(withTableId(BOOK_COLS.asin, "a")));
+
+        // getInt returns zero when the column is null, so call getObject first (which will return a null for nulls)
+        if (rs.getObject("avg_rating") != null) {
+            book.setAvgRating(rs.getInt("avg_rating"));
+        }
 
         // if there are any tags associated with this book
         // (handle tags differently because we joined them into the result set as CSV)
@@ -624,6 +713,43 @@ public class LibraryDAO {
     }
 
     // INSERT/UPDATE/DELETE METHODS
+
+    public void insertOrUpdateReview(int bookId, int userId, int rating, String review, String spoilers, String privateNotes, boolean isRecommended) {
+        String sql = """
+                insert into reviews (book_id, user_id, num_stars, review, spoilers, private_notes, recommended, create_date) 
+                values (?, ?, ?, ?, ?, ?, ?, now()) 
+                on duplicate key update num_stars=?, review=?, spoilers=?, private_notes=?, recommended=?, modify_date=now()
+                """;
+        jt.update(c -> {
+            var ps = c.prepareStatement(sql);
+            ps.setInt(1, bookId);
+            ps.setInt(2, userId);
+            ps.setInt(3, rating);
+            ps.setString(4, review);
+            ps.setString(5, spoilers);
+            ps.setString(6, privateNotes);
+            ps.setBoolean(7, isRecommended);
+            ps.setInt(8, rating);
+            ps.setString(9, review);
+            ps.setString(10, spoilers);
+            ps.setString(11, privateNotes);
+            ps.setBoolean(12, isRecommended);
+            return ps;
+        });
+    }
+
+    public void addAmazonInfo(String asin, int rating, int numRatings, Date pubDate, int pageCount) {
+        String sql = "insert into amazon (asin, rating, num_ratings, pub_date, page_count) values (?, ?, ?, ?, ?)";
+        jt.update(c -> {
+            var ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            ps.setString(1, asin);
+            ps.setInt(2, rating);
+            ps.setInt(3, numRatings);
+            ps.setDate(4, new java.sql.Date(pubDate.getTime()));
+            ps.setInt(5, pageCount);
+            return ps;
+        });
+    }
 
     /**
      * Delete a book from the library's database, along with any associated tags.

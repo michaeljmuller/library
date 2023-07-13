@@ -1,10 +1,13 @@
 <#import "macros/page-macro.ftl" as c/>
 <#import "macros/book-grid-macro.ftl" as b/>
 
+<#-- this is requird so we can use the ${x?url} syntax -->
+<#setting url_escaping_charset="UTF-8">
+
 <#assign hdr>
     <script>
         function onOrderChange(select) {
-            window.location.href = "/tag/${tag}?order=" + select.value;
+            window.location.href = "/tag/${tag?url}?order=" + select.value;
         }
     </script>
     <style>

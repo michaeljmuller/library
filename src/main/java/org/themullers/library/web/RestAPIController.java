@@ -5,15 +5,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.themullers.library.Book;
-import org.themullers.library.BookImageCache;
-import org.themullers.library.LibUtils;
-import org.themullers.library.Utils;
+import org.themullers.library.*;
 import org.themullers.library.db.LibraryDAO;
 import org.themullers.library.web.forms.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.regex.Pattern;
 
 /**
@@ -35,6 +36,22 @@ public class RestAPIController {
         this.dao = dao;
         this.libUtils = libUtils;
         this.bookImageCache = bookImageCache;
+    }
+
+    @PostMapping(value="/api/review", produces="application/json;charset=UTF-8")
+    public FormValidation addOrUpdateReview(@RequestBody ReviewForm review) {
+        var v = new ReviewFormValidation(review);
+        if (v.isSuccess()) {
+            try {
+                dao.insertOrUpdateReview(review.getBookId(), Utils.getCurrentUserId(), review.getRating(), review.getReview(), review.getSpoilers(), review.getPrivateNotes(), review.isRecommended());
+            }
+            catch (Exception x) {
+                v.addError("Exception thrown: " + x.getMessage());
+                v.setSuccess(false);
+                logger.info("exception while validating form data", x);
+            }
+        }
+        return v;
     }
 
     /**
@@ -208,4 +225,37 @@ public class RestAPIController {
     public void receiveCoverImage(@RequestParam("file") MultipartFile file, @PathVariable("id") int bookId) throws IOException {
         bookImageCache.cacheUploadedCoverForBook(file.getOriginalFilename(), file.getInputStream(), bookId);
     }
+
+    @PostMapping(value="/api/amazon")
+    public void addAmazonInfo(@RequestParam("asin") String asin,
+                              @RequestParam("rating") int rating,
+                              @RequestParam("numRatings") int numRatings,
+                              @RequestParam("pubDate") String pubDateStr,
+                              @RequestParam("pageCount") int pageCount)
+    {
+        var ratingFloat = rating / 10.0F;
+        logger.info(String.format("Asin: %s Rating: %3.1f Num ratings: %d Pub date: %s Page count: %d",
+                asin, ratingFloat, numRatings, pubDateStr, pageCount));
+        var localPubDate = LocalDate.parse(pubDateStr, DateTimeFormatter.ofPattern("yyyyMMdd"));
+        var zonedPubDateTime = localPubDate.atStartOfDay(ZoneId.systemDefault());
+        var pubDate = Date.from(zonedPubDateTime.toInstant());
+        dao.addAmazonInfo(asin, rating, numRatings, pubDate, pageCount);
+    }
+
+    @GetMapping(value="/api/amazon")
+    public void addAmazonInfo2(@RequestParam("asin") String asin,
+                              @RequestParam("rating") int rating,
+                              @RequestParam("numRatings") int numRatings,
+                              @RequestParam("pubDate") String pubDateStr,
+                              @RequestParam("pageCount") int pageCount)
+    {
+        var ratingFloat = rating / 10.0F;
+        logger.info(String.format("Asin: %s Rating: %3.1f Num ratings: %d Pub date: %s Page count: %d",
+                asin, ratingFloat, numRatings, pubDateStr, pageCount));
+        var localPubDate = LocalDate.parse(pubDateStr, DateTimeFormatter.ofPattern("yyyyMMdd"));
+        var zonedPubDateTime = localPubDate.atStartOfDay(ZoneId.systemDefault());
+        var pubDate = Date.from(zonedPubDateTime.toInstant());
+        dao.addAmazonInfo(asin, rating, numRatings, pubDate, pageCount);
+    }
+
 }

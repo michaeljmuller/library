@@ -1,5 +1,8 @@
 package org.themullers.library;
 
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.themullers.library.auth.LibraryUserDetails;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
@@ -129,5 +132,15 @@ public class Utils {
 
         // return everything after the last dot
         return filename.substring(dotPos + 1, filename.length()).toLowerCase();
+    }
+
+    public static Integer getCurrentUserId() {
+        try {
+            var principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            return ((LibraryUserDetails) principal).getId();
+        }
+        catch (Exception x) {
+            return null;
+        }
     }
 }

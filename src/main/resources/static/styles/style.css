@@ -22,8 +22,8 @@ body {
     background-color: lightgrey;
     padding: 5px;
     padding-left: 1em;
-    margin-bottom: 15px;
-    margin-top: 30px;
+    margin-top: 15px;
+    margin-bottom: 30px;
 }
 
 .audiobook-indicator {
@@ -75,6 +75,9 @@ div.rightLink {
     text-align: right;
     white-space: nowrap;
     padding-right: 2em;
+}
+
+#recommendationSection {
     padding-bottom: 2em;
 }
 
@@ -162,4 +165,34 @@ book-grid-container (contains all the books)
 
 .book-info-acq-date {
     font-style: italic;
+}
+
+.rec-container {
+    width: 100%;
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.clearfix {
+    reset: both;
+}
+
+.rec-text {
+    font-size: 80%;
+    float: right;
+    width: 100%;
+    margin-left: 1em;
+}
+
+.rec-cover-div {
+    float: left;
+    width: 123px;
+    max-width: 123px;
+    min-width: 123px;
+}
+
+.rec-cover-div img {
+    width: 100%;
+    height: auto;
+    border-radius: 1em;
 }

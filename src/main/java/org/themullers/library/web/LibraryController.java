@@ -20,10 +20,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
@@ -78,6 +75,7 @@ public class LibraryController {
         mv.addObject("titleCount", dao.countTitles());
         mv.addObject("audiobookCount", dao.countAudiobooks());
         mv.addObject("authorCount", dao.countAuthors());
+        mv.addObject("recs", dao.fetchRecommendedBooks(6, 0));
 
         return mv;
     }
@@ -95,9 +93,7 @@ public class LibraryController {
         boolean sortByLast = sortBy.equalsIgnoreCase("last");
 
         if (sortByLast) {
-            Collections.sort(authorInfoList, (a, b) -> {
-                return a.getByLast().compareTo(b.getByLast());
-            });
+            Collections.sort(authorInfoList, Comparator.comparing(AuthorInfo::getByLast));
         }
 
         var map = authorInfoList.stream().collect(groupingBy(a -> {
@@ -463,10 +459,44 @@ public class LibraryController {
      */
     @GetMapping("/book/{id}")
     public ModelAndView showBookDetails(@PathVariable("id") int bookId) {
+
+        var book = dao.fetchBook(bookId);
+        var reviews = dao.fetchReviews(bookId);
+
+        var thisUsersId = Utils.getCurrentUserId();
+        boolean isReviewed = reviews.stream().anyMatch(r -> r.getUser().getId() == thisUsersId);
+
         var mv = new LibraryModelAndView("/book-details");
         mv.addObject("book", dao.fetchBook(bookId));
+        mv.addObject("reviews", reviews);
+        mv.addObject("thisUsersId", thisUsersId);
+        mv.addObject("isNotReviewed", !isReviewed);
         return mv;
     }
+
+    /**
+     * Renders the form to review a book.
+     *
+     * @param bookId  The ID of the book to review.
+     * @param httpReferrer  the page that sent the user to this form (so we can send them back when done)
+     * @return  a view object containing the template that should be used to render the review form page
+     */
+    @GetMapping("/review/{bookId}")
+    public ModelAndView reviewBook(@PathVariable("bookId") int bookId,  @RequestHeader(value="Referer", required=false) String httpReferrer) {
+
+        // fetch info about the book to be reviewed
+        var book = dao.fetchBook(bookId);
+
+        // fetch this user's review of that book
+        var review = dao.fetchReview(bookId, Utils.getCurrentUserId());
+
+        var mv = new LibraryModelAndView("/review-form");
+        mv.addObject("book", book);
+        mv.addObject("review", review);
+        mv.addObject("referrer", httpReferrer);
+        return mv;
+    }
+
 
     /**
      * Returns the binary content of an image from an EPUB.

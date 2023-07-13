@@ -24,6 +24,7 @@ public class Book {
     protected String mobiObjectKey;
     protected String audiobookObjectKey;
     protected String amazonId;
+    protected Integer avgRating;
 
     private Set<String> tags = new HashSet<>();
 
@@ -145,6 +146,14 @@ public class Book {
 
     public void setAmazonId(String amazonId) {
         this.amazonId = amazonId;
+    }
+
+    public Integer getAvgRating() {
+        return avgRating;
+    }
+
+    public void setAvgRating(Integer avgRating) {
+        this.avgRating = avgRating;
     }
 
     public void addTag(String newTag) {

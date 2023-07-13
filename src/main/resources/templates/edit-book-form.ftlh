@@ -1,7 +1,6 @@
 <#import "macros/page-macro.ftl" as c/>
 
 <#-- https://tarekraafat.github.io/autoComplete.js/#/ -->
-
 <#assign hdr>
     <#-- links to autocomplete scripts and styles -->
     <script src="https://unpkg.com/@tarekraafat/autocomplete.js@10.2.6/dist/autoComplete.min.js"></script>

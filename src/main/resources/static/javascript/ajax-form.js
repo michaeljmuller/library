@@ -32,7 +32,7 @@ function convertFormToAjax(form, csrfParameterName, csrfToken, mvProperties, res
         // prevent Spring Boot from rejecting us for
         xhr.setRequestHeader(csrfParameterName, csrfToken);
 
-        // let Spring Book know we're sending JSON
+        // let Spring Boot know we're sending JSON
         xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
 
         // convert the form to JSON
@@ -77,7 +77,7 @@ function parseResponse(response) {
     when that happens, we build an error message array from the message in that response object
      */
     if (isSpringBootResponse(obj)) {
-        return ["Server responded with status " + obj.status + " and message: " + obj.error];
+        return { errorMessages: ["Server responded with status " + obj.status + " and message: " + obj.error]};
     }
 
     // otherwise, we just return the unmarshalled javascript array

@@ -13,7 +13,12 @@ public class LibraryApplication {
      * @param args parameters provided on the command line when this application was launched
      */
     public static void main(String args[]) {
+
+        // configure ebedded tomcat to allow encoded slashes
+        // this is to support urls like this:
+        // https://myhost.com/tag/Award%20Winning%20%2F%20Nominated
+        System.setProperty("org.apache.tomcat.util.buf.UDecoder.ALLOW_ENCODED_SLASH", "true");
+
         SpringApplication.run(LibraryApplication.class, args);
     }
-
 }

@@ -26,8 +26,8 @@ create table books (
     audiobook_object_key varchar(255) unique,
     asin varchar(64),
     primary key(id),
-    index(ebook_s3_object_key),
-    index(audiobook_s3_object_key),
+    index(epub_object_key),
+    index(audiobook_object_key)
 ) CHARACTER SET utf8, engine = innodb ;
 
 create table cover_images (
@@ -57,4 +57,29 @@ create table password_reset_tokens (
     primary key(id)
 ) CHARACTER SET utf8, engine = innodb;
 
+drop table reviews;
+create table reviews (
+    user_id int not null,
+    book_id int not null,
+    num_stars int,
+    review mediumtext,
+    spoilers mediumtext,
+    private_notes mediumtext,
+    recommended boolean not null default 0,
+    create_date datetime default now(),
+    modify_date datetime,
+    foreign key(user_id) references users(id),
+    primary key(user_id, book_id)
+) CHARACTER SET utf8, engine = innodb;
 
+create table amazon (
+    id int not null auto_increment,
+    sample_time timestamp not null default current_timestamp,
+    asin varchar(64) not null,
+    rating int not null,
+    num_ratings int not null,
+    pub_date date,
+    page_count int,
+    primary key(id),
+    index(asin)
+)

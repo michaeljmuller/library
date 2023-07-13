@@ -36,6 +36,22 @@ public class Security extends WebSecurityConfigurerAdapter {
             // also allow everyone access to the static resources
             conf.antMatchers("/styles/**", "/images/**").permitAll();
 
+            // free access to the amazon data collection endpoint
+
+            /*
+
+            commented out because disabling CSRF for the amazon endpoints seems to disable it for all endpoints.
+            maybe try http.csrf.ignoringAntMatchers() as indicated here: https://stackoverflow.com/a/34994299
+
+            try {
+                conf.antMatchers(HttpMethod.POST, "/api/amazon").permitAll().and().csrf().disable();
+                conf.antMatchers("/api/amazon").permitAll().and().csrf().disable();
+            }
+            catch (Exception x) {
+                x.printStackTrace(System.err);
+            }
+             */
+
             // require an administrator to access these pages (and REST API endpoints)
             conf.antMatchers("/admin/**", "/api/**").hasAnyRole("admin");
 
