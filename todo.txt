@@ -1,4 +1,5 @@
 TO DO:
+- set modify date when creating reviews + set modify date = create date where modify date is null
 - series not displaying in order (only for lois mm bujold?)
 - implement audiobook filter
 - resize cover images (smaller for faster page load)
@@ -14,6 +15,7 @@ TO DO:
 - BUG: picking auto-complete item with & inserts html-encoded &amp;
 - delete book feature
 - delete asset feature
+- delete review feature
 - clean up PG Wodehouse books
 
 DONE:

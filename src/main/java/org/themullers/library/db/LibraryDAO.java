@@ -350,7 +350,7 @@ public class LibraryDAO {
      * @return  a list of books
      */
     public List<Book> searchTitles(String searchText) {
-        String sql = String.format("select %s, group_concat(t.tag separator ',') as tags from books a left outer join tags t on a.id = t.book_id where a.title like ? group by a.id", commaSeparated(BOOK_COLS.class, "a"));
+        String sql = String.format("select %s, group_concat(t.tag separator ',') as tags, (select round(avg(num_stars)) from reviews r where book_id = a.id and r.num_stars > 0) as avg_rating from books a left outer join tags t on a.id = t.book_id where a.title like ? group by a.id", commaSeparated(BOOK_COLS.class, "a"));
         return jt.query(sql, LibraryDAO::mapBook, "%" + searchText + "%");
     }
 

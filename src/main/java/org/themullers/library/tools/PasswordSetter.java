@@ -14,7 +14,7 @@ public class PasswordSetter extends CommandLineTool {
         System.out.println(password);
         var encoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
         var encryptedPw = encoder.encode(password);
-        dao.setPassword(10, encryptedPw);
+        dao.setPassword(10000, encryptedPw);
     }
 
     public PasswordSetter() throws IOException, SQLException {

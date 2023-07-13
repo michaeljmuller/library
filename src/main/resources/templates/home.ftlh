@@ -22,15 +22,16 @@
     <div class="section">Recommendations</div>
 
     <#list recs as rec>
-        <div class="rec-container rec-clearfix">
-            <div class="rec-cover-div">
-                <img src="/book/cover/${rec.book().id?c}" />
-            </div>
-            <div class="rec-text">
-                <div>${rec.book().title} by ${rec.book().author}</div>
-                <div>
-                    <span class="rec-user">Recommended by ${rec.review().user.firstName}: </span>
-                    <span class="rating">
+        <a href="/book/${rec.book().id?c}" style="display: block; text-decoration: none;">
+            <div class="rec-container rec-clearfix">
+                <div class="rec-cover-div">
+                    <img src="/book/cover/${rec.book().id?c}" />
+                </div>
+                <div class="rec-text">
+                    <div><span class="rec-title">${rec.book().title}</span> by ${rec.book().author}</div>
+                    <div>
+                        <span class="rec-user">Recommended by ${rec.review().user.firstName}: </span>
+                        <span class="rating">
                             <#switch rec.review().rating>
                                 <#case 0>Did not finish<#break>
                                 <#case 1>Zero Stars<#break>
@@ -45,10 +46,11 @@
                                 <#case 10>⭐⭐⭐⭐⭐<#break>
                             </#switch>
                         </span>
+                    </div>
+                    <div>${rec.review().reviewHtml?no_esc ! }</div>
                 </div>
-                <div>${rec.review().reviewHtml?no_esc ! }</div>
             </div>
-        </div>
+        </a>
     </#list>
 
     <div class="rightLink" id="recommendationSection"><a href="/recents">More Recommendations &gt;&gt;</a></div>

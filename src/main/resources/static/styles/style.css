@@ -196,3 +196,7 @@ book-grid-container (contains all the books)
     height: auto;
     border-radius: 1em;
 }
+
+.rec-title {
+    font-style: italic;
+}
