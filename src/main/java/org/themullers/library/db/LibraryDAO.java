@@ -206,21 +206,37 @@ public class LibraryDAO {
         return new BookAndReview(mapBook(rs, rowNum), mapReview(rs, rowNum));
     }
 
-    public List<BookAndReview> fetchRecommendedBooks(int limit, int offset) {
+    /**
+     * Fetch a list of books recommended by a particular user (and the associated review).
+     * @param userId  The user whose recommendations to return (or <= 0 for recos from all users)
+     * @param limit  Limit the set of recommendations returned to this size.
+     * @param offset  Skip this number of recommendations in the returned results (used for paging).
+     * @return  A list of recommended books and the associated review.
+     */
+    public List<BookAndReview> fetchRecommendedBooks(int userId, int limit, int offset) {
+
+        // if a userId was specified, define a string that filters the results to only include recommendations from that user
+        // (otherwise, just use an empty string so no filtering occurs)
+        String userFilter = userId > 0 ? (" and v.user_id = ") + userId : "";
+
         String sql = """
                 select
-                    %s, group_concat(distinct t.tag separator ',') as tags, (select round(avg(num_stars)) from reviews r where book_id = a.id and r.num_stars > 0) as avg_rating, v.*, u.*
+                    %s, group_concat(distinct t.tag separator ',') as tags, 
+                    (select round(avg(num_stars)) from reviews r where book_id = a.id and r.num_stars > 0) as avg_rating, 
+                    v.*, 
+                    u.*
                 from books a
                 inner join reviews v on v.book_id = a.id
                 inner join users u on u.id = v.user_id
                 left outer join tags t on a.id = t.book_id
                 where v.recommended = 1
+                %s
                 group by a.id
-                order by v.create_date desc
+                order by v.num_stars desc, v.create_date desc
                 limit %s offset %s
                 """;
 
-        sql = String.format(sql, commaSeparated(BOOK_COLS.class, "a"), limit, offset);
+        sql = String.format(sql, commaSeparated(BOOK_COLS.class, "a"), userFilter, limit, offset);
 
         return jt.query(sql, LibraryDAO::mapBookAndReview);
     }
@@ -472,11 +488,19 @@ public class LibraryDAO {
     }
 
     /**
+     * Returns a list of all the users in the system.
+     * @return  A list of all the users in the system.
+     */
+    public List<User> fetchAllUsers() {
+        return jt.query("select * from users", LibraryDAO::mapUser);
+    }
+
+    /**
      * Returns all the books in the database.
      * @return  list of books
      */
     public List<Book> fetchAllBooks() {
-        String sql = String.format("select %s, group_concat(t.tag separator ',') as tags, (select round(avg(num_stars)) from reviews where book_id = id and rating > 0) as avg_rating from books a left outer join tags t on a.id = t.book_id group by a.id", commaSeparated(BOOK_COLS.class, "a"));
+        String sql = String.format("select %s, group_concat(t.tag separator ',') as tags, (select round(avg(num_stars)) from reviews v where book_id = a.id and v.num_stars > 0) as avg_rating from books a left outer join tags t on a.id = t.book_id group by a.id", commaSeparated(BOOK_COLS.class, "a"));
         return jt.query(sql, LibraryDAO::mapBook);
     }
 

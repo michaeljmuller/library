@@ -1,4 +1,5 @@
 TO DO:
+- add space after "more..." link at bottom of page
 - set modify date when creating reviews + set modify date = create date where modify date is null
 - series not displaying in order (only for lois mm bujold?)
 - implement audiobook filter
@@ -16,6 +17,7 @@ TO DO:
 - delete book feature
 - delete asset feature
 - delete review feature
+- display multiple authors on reviews
 - clean up PG Wodehouse books
 
 DONE:

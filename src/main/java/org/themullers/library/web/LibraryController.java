@@ -75,7 +75,7 @@ public class LibraryController {
         mv.addObject("titleCount", dao.countTitles());
         mv.addObject("audiobookCount", dao.countAudiobooks());
         mv.addObject("authorCount", dao.countAuthors());
-        mv.addObject("recs", dao.fetchRecommendedBooks(6, 0));
+        mv.addObject("recs", dao.fetchRecommendedBooks(-1, 6, 0));
 
         return mv;
     }
@@ -544,6 +544,70 @@ public class LibraryController {
         mv.addObject("audiobooks", audiobooks);
         mv.addObject("books", titlesAndAuthors);
         return mv;
+    }
+
+    /**
+     * Display a page of book recommendations
+     * @param userId  The user whose recommendations to display (pass < 0 for recommendations from all users).
+     * @param page  Which page of recommendations to display.
+     * @return  A view object containing the template that should be used to render the "recommendations" page.
+     */
+    @GetMapping("/recommendations/{userId}")
+    public ModelAndView recommendations(@PathVariable(value="userId") int userId, @RequestParam(value="page", defaultValue = "1") int page) {
+        var mv = new LibraryModelAndView("/recommendations");
+
+        // how many recommendations should we display per page?
+        int recosPerPage = 15;
+
+        // get a list of all the users in the system
+        var users = dao.fetchAllUsers();
+
+        // get this user's username (or indicate "everyone" if no user exits for the specified user id)
+        String userName = "everyone";
+        for (var user : users) {
+            if (userId == user.getId()) {
+                userName = user.getFirstName() + " " + user.getLastName();
+                break;
+            }
+        }
+
+        // fetch one more recommendation than the number we display on the page so we know whether there's another page of results
+        var recos = dao.fetchRecommendedBooks(userId, recosPerPage+1, (page-1)*recosPerPage);
+
+        // if there are more results after this page, adjust the count and throw out the last result
+        // (we'll display it as the first result of the next page)
+        var numRecos = recos.size();
+        var hasMore = numRecos > recosPerPage;
+        if (hasMore) {
+            numRecos--;
+            recos.remove(numRecos);
+        }
+
+        // calculate the index of the first book on this page
+        var firstRecoNum = ((page-1) * recosPerPage) + 1;
+
+        mv.addObject("recommendations", recos);
+        mv.addObject("page", page);
+        mv.addObject("nextPage", page+1);
+        mv.addObject("firstRecoNum", firstRecoNum);
+        mv.addObject("lastRecoNum", firstRecoNum + numRecos - 1);
+        mv.addObject("hasMore", hasMore);
+        mv.addObject("userId", userId);
+        mv.addObject("users", users);
+        mv.addObject("userName", userName);
+
+        return mv;
+    }
+
+
+    /**
+     * Display a page of book recommendations.
+     * @param page  Which page of recommendations to display.
+     * @return  A view object containing the template that should be used to render the "recommendations" page.
+     */
+    @GetMapping("/recommendations")
+    public ModelAndView recommendations(@RequestParam(value="page", defaultValue = "1") int page) {
+        return recommendations(-1, page);
     }
 
     /**
