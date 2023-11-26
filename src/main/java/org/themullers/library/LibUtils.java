@@ -47,7 +47,8 @@ public class LibUtils {
      * The returned data structure's elements (the keys and values of the map)
      * are ordered chronologically by publication date; the books within that series
      * (the values) are ordered by their publication date and the series (the keys)
-     * are ordered by the publication date of the earliest book in the series.
+     * are ordered by the series sequence number (or by publication date for the
+     * standalone books).
      *
      * If the book is not in a series (if getSeries() returns null), the book
      * will be grouped as STANDALONE.
@@ -57,13 +58,14 @@ public class LibUtils {
      */
     public Map<String, List<Book>> groupBooksBySeries(List<Book> books) {
 
-        // start by sorting the provided books by their publication year
-        books.sort((Book a, Book b) -> a.getPublicationYear() - b.getPublicationYear());
+        // sort all the books by publication year; this ensures that the series
+        // will be added in order from oldest to newest
+        books.sort((a, b) -> a.getPublicationYear() - b.getPublicationYear());
 
         // create a map to hold the groupings
         var groupedBooks = new LinkedHashMap<String, List<Book>>();
 
-        // for each book
+        // group the books by series
         for (var book : books) {
 
             // get the series (or use STANDALONE as the series if there isn't one)
@@ -74,6 +76,21 @@ public class LibUtils {
 
             // add the book to the list of books for this series
             groupedBooks.get(series).add(book);
+        }
+
+        // sort the books within each series
+        for (var series : groupedBooks.entrySet()) {
+            var seriesName = series.getKey();
+            var seriesBooks = series.getValue();
+
+            // sort the standalone books by publication year
+            if (STANDALONE.equals(seriesName)) {
+                seriesBooks.sort((a, b) -> a.getPublicationYear() - b.getPublicationYear());
+            }
+            // sort the series by the series sequence number
+            else {
+                seriesBooks.sort((a,b) -> a.getSeriesSequence() - b.getSeriesSequence());
+            }
         }
 
         return groupedBooks;
