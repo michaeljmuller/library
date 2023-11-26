@@ -32,8 +32,8 @@ jobs:
           java-version: 17
           distribution: 'adopt'
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
+      # Builds the project
+      - name: compile and package the code
         run: mvn -B -DskipTests clean package
 
       # Deploy the jar to the production server (but don't install it)
