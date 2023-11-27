@@ -36,11 +36,15 @@ jobs:
       - name: compile and package the code
         run: mvn -B -DskipTests clean package
 
+      # Get the project version number from the POM
+      - name: get project version number
+        run: echo  "LIBRARY_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> "$GITHUB_ENV"
+
       # Saves the jar
       - name: save the jar as a github artifact
         uses: actions/upload-artifact@v3
         with:
-          name: runnable-jar
+          name: runnable-jar-$LIBRARY_VERSION
           path: target/library-*.jar
 
       # Deploy the jar to the production server (but don't install it)
