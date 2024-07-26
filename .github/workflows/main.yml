@@ -23,7 +23,7 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       # Set up version 17 of the JDK
       - name: Setup jdk-17
@@ -42,17 +42,7 @@ jobs:
 
       # Saves the jar
       - name: save the jar as a github artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: runnable-jar-${{ env.LIBRARY_VERSION }}
           path: target/library-*.jar
-
-      # Deploy the jar to the production server (but don't install it)
-#      - name: send jar to themullers.org for deployment
-#        uses: appleboy/scp-action@master
-#        with:
-#          host: themullers.org
-#          username: github
-#          password: ${{ secrets.DEPLOY_PW }}
-#          source: target/*.jar
-#          target: ./
