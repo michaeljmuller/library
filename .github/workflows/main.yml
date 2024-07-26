@@ -44,5 +44,5 @@ jobs:
       - name: save the jar as a github artifact
         uses: actions/upload-artifact@v4
         with:
-          name: runnable-jar-${{ env.LIBRARY_VERSION }}
-          path: target/library-*.jar
+          name: library-${{ env.LIBRARY_VERSION }}.jar
+          path: target/library-${{ env.LIBRARY_VERSION }}.jar
